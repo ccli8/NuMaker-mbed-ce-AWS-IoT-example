@@ -155,19 +155,15 @@ public:
 
        /* Start the handshake, the rest will be done in onReceive() */
         if (_debug) mbedtls_printf("Starting the TLS handshake...\r\n");
-        ret = mbedtls_ssl_handshake(&_ssl);
+        do {
+            ret = mbedtls_ssl_handshake(&_ssl);
+        } while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
         if (ret < 0) {
-            if (ret != MBEDTLS_ERR_SSL_WANT_READ &&
-                ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
-                print_mbedtls_error("mbedtls_ssl_handshake", ret);
-                onError(_tcpsocket, -1);
-            }
-            else {
-                _error = ret;
-            }
-            return _error;
+            print_mbedtls_error("mbedtls_ssl_handshake", ret);
+            onError(_tcpsocket, ret);
+            return ret;
         }
-
+            
         /* It also means the handshake is done, time to print info */
         if (_debug) mbedtls_printf("TLS connection to %s:%d established\r\n", _hostname, _port);
 
@@ -382,7 +378,7 @@ protected:
         size = socket->send(buf, len);
 
         if(NSAPI_ERROR_WOULD_BLOCK == size) {
-            return len;
+            return MBEDTLS_ERR_SSL_WANT_WRITE;
         }
         else if (size < 0){
             return -1;

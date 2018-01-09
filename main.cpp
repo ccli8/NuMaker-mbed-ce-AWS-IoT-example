@@ -274,7 +274,7 @@ public:
             printf("Connecting with %s:%d\n", _domain, _port);
             tls_rc = _tlssocket->connect(_domain, _port);
             if (tls_rc != NSAPI_ERROR_OK) {
-                printf("Connects with %s:%d failed\n", _domain, _port);
+                printf("Connects with %s:%d failed: %d\n", _domain, _port, tls_rc);
                 break;
             }
             printf("Connects with %s:%d OK\n", _domain, _port);
@@ -512,7 +512,7 @@ public:
             printf("Connecting with %s:%d\n", _domain, _port);
             tls_rc = _tlssocket->connect(_domain, _port);
             if (tls_rc != NSAPI_ERROR_OK) {
-                printf("Connects with %s:%d failed\n", _domain, _port);
+                printf("Connects with %s:%d failed: %d\n", _domain, _port, tls_rc);
                 break;
             }
             printf("Connects with %s:%d OK\n\n", _domain, _port);
@@ -735,5 +735,5 @@ int main() {
     mbed_stats_heap_t heap_stats;
     mbed_stats_heap_get(&heap_stats);
     printf("\nCurrent heap size: %lu\n", heap_stats.current_size);
-    printf("Max heap size: %lu\n", heap_stats.max_size);
+    printf("Max heap size: %lu\n\n", heap_stats.max_size);
 }
