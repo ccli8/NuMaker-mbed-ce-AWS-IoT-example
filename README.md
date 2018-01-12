@@ -89,6 +89,9 @@ User public key has been included in user certificate and is not used here.
     const char SSL_USER_PRIV_KEY_PEM[] = "-----BEGIN RSA PRIVATE KEY-----\n"
     ```
 
+**NOTE:** The credential hard-coded in source code is deactivated or deleted.
+          Use your own credential for connection with AWS IoT.
+
 ### Connect through MQTT
 To connect your device with AWS IoT through MQTT, you need to configure the following parameters.
 
