@@ -291,3 +291,41 @@ You could get total memory footprint by adding these two together.
 Current heap size: 1351
 Max heap size: 63022
 </pre>
+
+## Trouble-shooting
+- Over ESP8266 WiFi,
+  if you make a loop test like below (`main.cpp`), you may always meet errors in the following loops
+  after some network error has happened in the previous one.
+    <pre>
+    <b>while (true) {</b>
+        #if AWS_IOT_MQTT_TEST
+            AWS_IoT_MQTT_Test *mqtt_test = new AWS_IoT_MQTT_Test(AWS_IOT_MQTT_SERVER_NAME, AWS_IOT_MQTT_SERVER_PORT, network);
+            mqtt_test->start_test();
+            delete mqtt_test;
+        #endif  // End of AWS_IOT_MQTT_TEST
+    
+        #if AWS_IOT_HTTPS_TEST
+            AWS_IoT_HTTPS_Test *https_test = new AWS_IoT_HTTPS_Test(AWS_IOT_HTTPS_SERVER_NAME, AWS_IOT_HTTPS_SERVER_PORT, network);
+            https_test->start_test();
+            delete https_test;
+        #endif  // End of AWS_IOT_HTTPS_TEST
+    <b>}</b>
+    </pre>
+    This issue would be caused by failure of ESP8266 AT commands **CLOSE**/**DISCONNECT**
+    because ESP8266 F/W is still busy in handling previous unfinished network transfer
+    due to bad network status and fails these commands.
+    These commands must be OK for ESP8266 F/W to reset connection state correctly.
+    If that happens, try enlarging [ESP8266 driver's](https://github.com/ARMmbed/esp8266-driver) timeout configuration.
+    For example, enlarge `ESP8266_MISC_TIMEOUT` (defined in [ESP8266Interface.cpp](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.cpp))
+    to 5000 ms (through `mbed_app.json`).
+    <pre>
+    {
+        "macros": [
+            "MBED_CONF_APP_MAIN_STACK_SIZE=4096",
+            "MBEDTLS_USER_CONFIG_FILE=\"mbedtls_user_config.h\"",
+            "MBED_HEAP_STATS_ENABLED=1",
+            "MBED_MEM_TRACING_ENABLED=1",
+            <b>"ESP8266_MISC_TIMEOUT=5000"</b>
+        ],
+        "config": {
+    </pre>
