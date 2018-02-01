@@ -316,8 +316,9 @@ Max heap size: 63022
     due to bad network status and fails these commands.
     These commands must be OK for ESP8266 F/W to reset connection state correctly.
     If that happens, try enlarging [ESP8266 driver's](https://github.com/ARMmbed/esp8266-driver) timeout configuration.
-    For example, enlarge `ESP8266_MISC_TIMEOUT` (defined in [ESP8266Interface.cpp](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.cpp))
-    to 5000 ms (through `mbed_app.json`).
+    For example, enlarge `ESP8266_SEND_TIMEOUT`/`ESP8266_RECV_TIMEOUT`/`ESP8266_MISC_TIMEOUT` (defined in
+    [ESP8266Interface.cpp](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.cpp))
+    to 5000/5000/5000 ms respectively (through `mbed_app.json`).
     <pre>
     {
         "macros": [
@@ -325,6 +326,8 @@ Max heap size: 63022
             "MBEDTLS_USER_CONFIG_FILE=\"mbedtls_user_config.h\"",
             "MBED_HEAP_STATS_ENABLED=1",
             "MBED_MEM_TRACING_ENABLED=1",
+            <b>"ESP8266_SEND_TIMEOUT=5000",</b>
+            <b>"ESP8266_RECV_TIMEOUT=5000",</b>
             <b>"ESP8266_MISC_TIMEOUT=5000"</b>
         ],
         "config": {
