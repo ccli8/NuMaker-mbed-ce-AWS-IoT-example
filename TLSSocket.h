@@ -287,7 +287,8 @@ public:
      */
     int read(unsigned char* buffer, int len, int timeout) {
         set_timeout(timeout);
-        return recv(buffer, len);
+        int rc = recv(buffer, len);
+        return (rc == MBEDTLS_ERR_SSL_WANT_READ || rc == MBEDTLS_ERR_SSL_WANT_WRITE) ? 0 : rc;
     }
 
     /**
@@ -295,7 +296,8 @@ public:
      */
     int write(unsigned char* buffer, int len, int timeout) {
         set_timeout(timeout);
-        return send(buffer, len);
+        int rc = send(buffer, len);
+        return (rc == MBEDTLS_ERR_SSL_WANT_READ || rc == MBEDTLS_ERR_SSL_WANT_WRITE) ? 0 : rc;
     }
     
 protected:
