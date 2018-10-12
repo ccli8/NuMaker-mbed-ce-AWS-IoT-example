@@ -19,15 +19,13 @@
             "target.network-default-interface-type" : "WIFI",
             "target.macros_add": [
                 "ESP8266_AT_SEL=ESP8266_AT_EXTERN"
-            ],
-            "target.macros_remove": ["MBEDTLS_CONFIG_HW_SUPPORT"]
+            ]
         },
         "NUMAKER_PFM_M487": {
             "target.network-default-interface-type" : "WIFI",
             "target.macros_add": [
                 "ESP8266_AT_SEL=ESP8266_AT_EXTERN"
-            ],
-            "target.macros_remove": ["MBEDTLS_CONFIG_HW_SUPPORT"]
+            ]
         }
     }
 }
