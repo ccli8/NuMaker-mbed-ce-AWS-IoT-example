@@ -14,7 +14,6 @@
 #define AWS_IOT_HTTPS_TEST      0
 
 #include "mbed.h"
-#include "easy-connect.h"
 
 /* TLSSocket = Mbed TLS over TCPSocket */
 #include "TLSSocket.h"
@@ -710,23 +709,26 @@ int main() {
     printf("Using Mbed OS from master.\n");
 #endif
 
-    /* Use the easy-connect lib to support multiple network bearers.   */
-    /* See https://github.com/ARMmbed/easy-connect README.md for info. */
-
-    NetworkInterface* network = easy_connect(false);
-    if (NULL == network) {
+    NetworkInterface *net = NetworkInterface::get_default_instance();
+    if (NULL == net) {
         printf("Connecting to the network failed. See serial output.\n");
         return 1;
     }
+    nsapi_error_t status = net->connect();
+    if (status != NSAPI_ERROR_OK) {
+        printf("Connecting to the network failed %d!\n", status);
+        return -1;
+    }
+    printf("Connected to the network successfully. IP address: %s\n", net->get_ip_address());
     
 #if AWS_IOT_MQTT_TEST
-    AWS_IoT_MQTT_Test *mqtt_test = new AWS_IoT_MQTT_Test(AWS_IOT_MQTT_SERVER_NAME, AWS_IOT_MQTT_SERVER_PORT, network);
+    AWS_IoT_MQTT_Test *mqtt_test = new AWS_IoT_MQTT_Test(AWS_IOT_MQTT_SERVER_NAME, AWS_IOT_MQTT_SERVER_PORT, net);
     mqtt_test->start_test();
     delete mqtt_test;
 #endif  // End of AWS_IOT_MQTT_TEST
     
 #if AWS_IOT_HTTPS_TEST
-    AWS_IoT_HTTPS_Test *https_test = new AWS_IoT_HTTPS_Test(AWS_IOT_HTTPS_SERVER_NAME, AWS_IOT_HTTPS_SERVER_PORT, network);
+    AWS_IoT_HTTPS_Test *https_test = new AWS_IoT_HTTPS_Test(AWS_IOT_HTTPS_SERVER_NAME, AWS_IOT_HTTPS_SERVER_PORT, net);
     https_test->start_test();
     delete https_test;
 #endif  // End of AWS_IOT_HTTPS_TEST
