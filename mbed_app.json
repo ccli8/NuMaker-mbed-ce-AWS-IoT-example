@@ -26,6 +26,12 @@
             "target.macros_add": [
                 "ESP8266_AT_SEL=ESP8266_AT_EXTERN"
             ]
+        },
+        "NUMAKER_IOT_M487": {
+            "target.network-default-interface-type" : "WIFI",
+            "target.macros_add": [
+                "ESP8266_AT_SEL=ESP8266_AT_ONBOARD"
+            ]
         }
     }
 }
