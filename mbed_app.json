@@ -5,7 +5,7 @@
     ],
     "target_overrides": {
         "*": {
-            "platform.stdio-baud-rate"              : 9600,
+            "platform.stdio-baud-rate"              : 115200,
             "platform.stdio-convert-newlines"       : true,
             "platform.heap-stats-enabled"           : 1,
             "mbed-trace.enable"                     : null,
