@@ -15,8 +15,8 @@
 
 #include "mbed.h"
 
-/* TLSSocket = Mbed TLS over TCPSocket */
-#include "TLSSocket.h"
+/* MyTLSSocket = Mbed TLS over TCPSocket */
+#include "MyTLSSocket.h"
 
 /* Measure memory footprint */
 #include "mbed_stats.h"
@@ -239,13 +239,13 @@ public:
      */
     AWS_IoT_MQTT_Test(const char * domain, const uint16_t port, NetworkInterface *net_iface) :
         _domain(domain), _port(port) {
-        _tlssocket = new TLSSocket(net_iface, SSL_CA_CERT_PEM, SSL_USER_CERT_PEM, SSL_USER_PRIV_KEY_PEM);
+        _tlssocket = new MyTLSSocket(net_iface, SSL_CA_CERT_PEM, SSL_USER_CERT_PEM, SSL_USER_PRIV_KEY_PEM);
         /* Blocking mode */
         _tlssocket->set_blocking(true);
         /* Print Mbed TLS handshake log */
         _tlssocket->set_debug(true);
 
-        _mqtt_client = new MQTT::Client<TLSSocket, Countdown, MAX_MQTT_PACKET_SIZE>(*_tlssocket);
+        _mqtt_client = new MQTT::Client<MyTLSSocket, Countdown, MAX_MQTT_PACKET_SIZE>(*_tlssocket);
     }
 
     /**
@@ -435,8 +435,8 @@ protected:
     }
     
 protected:
-    TLSSocket *                                                             _tlssocket;
-    MQTT::Client<TLSSocket, Countdown, MAX_MQTT_PACKET_SIZE> *              _mqtt_client;
+    MyTLSSocket *                                                           _tlssocket;
+    MQTT::Client<MyTLSSocket, Countdown, MAX_MQTT_PACKET_SIZE> *            _mqtt_client;
 
     const char *_domain;                    /**< Domain name of the MQTT server */
     const uint16_t _port;                   /**< Port number of the MQTT server */
@@ -482,7 +482,7 @@ public:
     AWS_IoT_HTTPS_Test(const char * domain, const uint16_t port, NetworkInterface *net_iface) :
             _domain(domain), _port(port) {
 
-        _tlssocket = new TLSSocket(net_iface, SSL_CA_CERT_PEM, SSL_USER_CERT_PEM, SSL_USER_PRIV_KEY_PEM);
+        _tlssocket = new MyTLSSocket(net_iface, SSL_CA_CERT_PEM, SSL_USER_CERT_PEM, SSL_USER_PRIV_KEY_PEM);
         /* Non-blocking mode */
         _tlssocket->set_blocking(false);
         /* Print Mbed TLS handshake log */
@@ -687,7 +687,7 @@ protected:
     }
      
 protected:
-    TLSSocket *     _tlssocket;
+    MyTLSSocket *     _tlssocket;
 
     const char *_domain;                    /**< Domain name of the HTTPS server */
     const uint16_t _port;                   /**< Port number of the HTTPS server */

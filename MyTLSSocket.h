@@ -1,5 +1,5 @@
-#ifndef _TLS_SOCKET_H_
-#define _TLS_SOCKET_H_
+#ifndef _MY_TLS_SOCKET_H_
+#define _MY_TLS_SOCKET_H_
 
 /* Change to a number between 1 and 4 to debug the TLS connection */
 #define DEBUG_LEVEL 0
@@ -17,11 +17,11 @@
 #include "mbedtls_utils.h"
     
 /**
- * \brief TLSSocket a wrapper around TCPSocket for interacting with TLS servers
+ * \brief MyTLSSocket a wrapper around TCPSocket for interacting with TLS servers
  */
-class TLSSocket {
+class MyTLSSocket {
 public:
-    TLSSocket(NetworkInterface* net_iface, const char* ssl_ca_pem, const char* ssl_owncert_pem, const char* ssl_own_priv_key_pem) {
+    MyTLSSocket(NetworkInterface* net_iface, const char* ssl_ca_pem, const char* ssl_owncert_pem, const char* ssl_own_priv_key_pem) {
         _tcpsocket = new TCPSocket(net_iface);
         _ssl_ca_pem = ssl_ca_pem;
         _ssl_owncert_pem = ssl_owncert_pem;
@@ -43,7 +43,7 @@ public:
         mbedtls_ssl_config_init(&_ssl_conf);
     }
 
-    ~TLSSocket() {
+    ~MyTLSSocket() {
         mbedtls_entropy_free(&_entropy);
         mbedtls_ctr_drbg_free(&_ctr_drbg);
         mbedtls_x509_crt_free(&_cacert);
@@ -419,4 +419,4 @@ private:
     mbedtls_ssl_config _ssl_conf;
 };
 
-#endif // _TLS_SOCKET_H_
+#endif // _MY_TLS_SOCKET_H_
