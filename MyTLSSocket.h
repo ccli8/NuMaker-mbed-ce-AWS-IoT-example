@@ -128,8 +128,8 @@ public:
         mbedtls_ssl_conf_authmode(&_ssl_conf, MBEDTLS_SSL_VERIFY_REQUIRED);
 
 #if DEBUG_LEVEL > 0
-        mbedtls_ssl_conf_verify(&_ssl_conf, my_verify, NULL);
-        mbedtls_ssl_conf_dbg(&_ssl_conf, my_debug, NULL);
+        mbedtls_ssl_conf_verify(&_ssl_conf, my_verify, this);
+        mbedtls_ssl_conf_dbg(&_ssl_conf, my_debug, this);
         mbedtls_debug_set_threshold(DEBUG_LEVEL);
 #endif
 
@@ -311,7 +311,7 @@ protected:
                          const char *str)
     {
         const char *p, *basename;
-        (void) ctx;
+        MyTLSSocket *tlssocket = static_cast<MyTLSSocket *>(ctx);
 
         /* Extract basename from file */
         for(p = basename = file; *p != '\0'; p++) {
@@ -320,7 +320,7 @@ protected:
             }
         }
 
-        if (_debug) {
+        if (tlssocket->_debug) {
             mbedtls_printf("%s:%04d: |%d| %s", basename, line, level, str);
         }
     }
@@ -333,18 +333,18 @@ protected:
     {
         const uint32_t buf_size = 1024;
         char *buf = new char[buf_size];
-        (void) data;
+        MyTLSSocket *tlssocket = static_cast<MyTLSSocket *>(data);
 
-        if (_debug) mbedtls_printf("\nVerifying certificate at depth %d:\n", depth);
+        if (tlssocket->_debug) mbedtls_printf("\nVerifying certificate at depth %d:\n", depth);
         mbedtls_x509_crt_info(buf, buf_size - 1, "  ", crt);
-        if (_debug) mbedtls_printf("%s", buf);
+        if (tlssocket->_debug) mbedtls_printf("%s", buf);
 
         if (*flags == 0)
-            if (_debug) mbedtls_printf("No verification issue for this certificate\n");
+            if (tlssocket->_debug) mbedtls_printf("No verification issue for this certificate\n");
         else
         {
             mbedtls_x509_crt_verify_info(buf, buf_size, "  ! ", *flags);
-            if (_debug) mbedtls_printf("%s\n", buf);
+            if (tlssocket->_debug) mbedtls_printf("%s\n", buf);
         }
 
         delete[] buf;
