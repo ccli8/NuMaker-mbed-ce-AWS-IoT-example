@@ -8,6 +8,7 @@
             "platform.stdio-baud-rate"              : 115200,
             "platform.stdio-convert-newlines"       : true,
             "platform.heap-stats-enabled"           : 1,
+            "platform.stack-stats-enabled"          : 1,
             "mbed-trace.enable"                     : null,
             "nsapi.default-wifi-security"           : "WPA_WPA2",
             "nsapi.default-wifi-ssid"               : "\"SSID\"",

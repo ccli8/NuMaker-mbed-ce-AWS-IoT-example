@@ -18,8 +18,13 @@
 /* MyTLSSocket = Mbed TLS over TCPSocket */
 #include "MyTLSSocket.h"
 
+#if (MBED_HEAP_STATS_ENABLED) || (MBED_STACK_STATS_ENABLED)
 /* Measure memory footprint */
 #include "mbed_stats.h"
+/* Fix up the compilation on AMRCC for PRIu32 */
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+#endif
 
 #if AWS_IOT_MQTT_TEST
 /* MQTT-specific header files */
@@ -349,9 +354,9 @@ public:
         
         printf("MQTT disconnecting");
         if ((mqtt_rc = _mqtt_client->disconnect()) != 0) {
-            printf("\rMQTT disconnects failed %d\n", mqtt_rc);
+            printf("\rMQTT disconnects failed %d\n\n", mqtt_rc);
         }
-        printf("\rMQTT disconnects OK\n");
+        printf("\rMQTT disconnects OK\n\n");
         
         _tlssocket->close();
     }
@@ -696,6 +701,37 @@ protected:
 
 #endif  // End of AWS_IOT_HTTPS_TEST
 
+#if (MBED_HEAP_STATS_ENABLED)
+void print_heap_stats()
+{
+    mbed_stats_heap_t stats;
+    mbed_stats_heap_get(&stats);
+    printf("** MBED HEAP STATS **\n");
+    printf("**** current_size: %" PRIu32 "\n", stats.current_size);
+    printf("**** max_size    : %" PRIu32 "\n", stats.max_size);
+    printf("*****************************\n\n");
+}
+#endif  // MBED_HEAP_STATS_ENABLED
+
+#if (MBED_STACK_STATS_ENABLED)
+void print_stack_statistics()
+{
+    printf("** MBED THREAD STACK STATS **\n");
+    int cnt = osThreadGetCount();
+    mbed_stats_stack_t *stats = (mbed_stats_stack_t*) malloc(cnt * sizeof(mbed_stats_stack_t));
+
+    if (stats) {
+        cnt = mbed_stats_stack_get_each(stats, cnt);
+        for (int i = 0; i < cnt; i++) {
+            printf("Thread: 0x%" PRIx32 ", Stack size: %" PRIu32 ", Max stack: %" PRIu32 "\r\n", stats[i].thread_id, stats[i].reserved_size, stats[i].max_size);
+        }
+
+        free(stats);
+    }
+    printf("*****************************\n\n");
+}
+#endif  // MBED_STACK_STATS_ENABLED
+
 int main() {
     
     /* The default 9600 bps is too slow to print full TLS debug info and could
@@ -733,9 +769,12 @@ int main() {
     delete https_test;
 #endif  // End of AWS_IOT_HTTPS_TEST
 
-    /* Heap usage */
-    mbed_stats_heap_t heap_stats;
-    mbed_stats_heap_get(&heap_stats);
-    printf("\nCurrent heap size: %lu\n", heap_stats.current_size);
-    printf("Max heap size: %lu\n\n", heap_stats.max_size);
+#if (MBED_HEAP_STATS_ENABLED)
+    print_heap_stats();
+#endif
+
+#if (MBED_STACK_STATS_ENABLED)
+    print_stack_statistics();
+#endif
+
 }
