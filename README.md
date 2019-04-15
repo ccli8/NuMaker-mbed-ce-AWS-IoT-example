@@ -308,3 +308,26 @@ Max heap size: 63022
         ],
         "config": {
     </pre>
+    
+-   Reduce memory footprint according to RFC 6066 TLS extension
+    `MBEDTLS_SSL_IN_CONTENT_LEN`/`MBEDTLS_SSL_OUT_CONTENT_LEN` determine the sizes of incoming/outgoing TLS I/O buffers.
+    We reduce the sizes by default according to RFC 6066:
+    1. Enable RFC 6066 max_fragment_length extension.
+    1. Reduce `MBEDTLS_SSL_IN_CONTENT_LEN`/`MBEDTLS_SSL_OUT_CONTENT_LEN` to 4KiB/4KiB from 16KiB/16KiB.
+
+    But this approach is risky because:
+    1. AWS IoT doesn't support RFC 6066 TLS extension yet.
+    1. TLS handshake may need larger I/O buffers than configured 4KiB/4KiB.
+
+    If you doubt your trouble is caused by this configuration, disable it by:
+    1.  Remove the line `my-tlssocket.tls-max-frag-len` in `mbed_app.json`.
+        ```json
+        "NUMAKER_PFM_NUC472": {
+            "target.network-default-interface-type" : "ETHERNET",
+            "target.macros_add": [
+                "ESP8266_AT_SEL=ESP8266_AT_EXTERN"
+            ]
+        },
+        ```
+    1.  Comment out `MBEDTLS_SSL_IN_CONTENT_LEN`/`MBEDTLS_SSL_OUT_CONTENT_LEN` in `mbedtls_user_config.h`.
+        This will change back to 16KiB/16KiB.
