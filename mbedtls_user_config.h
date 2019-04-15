@@ -41,5 +41,8 @@
 #undef MBEDTLS_AES_ALT
 #endif /* TARGET_STM32F439xI && MBEDTLS_CONFIG_HW_SUPPORT */
 
-/* Internal test only. Don't uncomment it out */
-//#define MBEDTLS_SSL_MAX_CONTENT_LEN     4096
+/* Maximum length (in bytes) of incoming plaintext fragments */
+//#define MBEDTLS_SSL_IN_CONTENT_LEN      4096
+
+/* Maximum length (in bytes) of outgoing plaintext fragments */
+//#define MBEDTLS_SSL_OUT_CONTENT_LEN     4096
