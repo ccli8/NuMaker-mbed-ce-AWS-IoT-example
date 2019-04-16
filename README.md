@@ -164,30 +164,6 @@ AWS IoT HTTPS protocol supports topic publish-only and RESTful API. The example 
     - Get thing shadow RESTfully through HTTPS/GET method
     - Delete thing shadow RESTfully through HTTPS/DELETE method
 
-## Patch MQTT library
-Currently, MQTT library has one issue with unsubscribe from topic multiple times. Fix it:
-
-In `MQTT/MQTTClient.h` > `MQTT::Client<Network, Timer, MAX_MQTT_PACKET_SIZE, b>::cycle`,
-<pre>
-switch (packet_type)
-    {
-        default:
-            // no more data to read, unrecoverable. Or read packet fails due to unexpected network error
-            rc = packet_type;
-            goto exit;
-        case 0: // timed out reading packet
-            break;
-        case CONNACK:
-        case PUBACK:
-        case SUBACK:
-        <b>
-        case UNSUBACK:
-        </b>
-            break;
-        case PUBLISH:
-        {
-</pre>
-
 ## Monitor the application
 If you configure your terminal program with **9600/8-N-1**, you would see output similar to:
 
