@@ -8,6 +8,25 @@ On Mbed OS, connection with AWS IoT requires Mbed TLS. It requires more than 64 
 Currently, the following Nuvoton Mbed-enalbed boards can afford such memory footprint:
 - [NuMaker-PFM-NUC472](https://developer.mbed.org/platforms/Nuvoton-NUC472/)
 - [NuMaker-PFM-M487](https://developer.mbed.org/platforms/NUMAKER-PFM-M487/)
+- [NuMaker-IoT-M487](https://os.mbed.com/platforms/NUMAKER-IOT-M487/)
+- [NuMaker-PFM-M2351](https://os.mbed.com/platforms/NUMAKER-PFM-M2351/)
+
+### NuMaker-PFM-M2351
+NuMaker-PFM-M2351 is a Cortex-M23 based target which supports TrustZone.
+To develop on this target, user needs to build two codes: secure and non-secure.
+For secure code, there has been pre-built one in mbed-os tree.
+But its memory partition doesn't meet this example.
+This example excludes the pre-built secure code in mbed-os tree (see **.mbedignore**) and provides
+another one in **targets/TARGET_NUVOTON/TARGET_M2351/TARGET_NUMAKER_PFM_M2351**.
+To provide your own secure code, please follow the instructions in [NuMaker-mbed-TZ-secure-example](https://github.com/OpenNuvoton/NuMaker-mbed-TZ-secure-example).
+
+To build non-secure code for this example, run:
+```
+mbed compile -m NUMAKER_PFM_M2351 -t ARMC6
+```
+And you would get **NuMaker-mbed-AWS-IoT-example.hex**.
+
+To run this example, user needs to flash secure code like **NuMaker-mbed-TZ-secure-example.hex** first and then non-secure code **NuMaker-mbed-AWS-IoT-example.hex**.
 
 ## Access and manage AWS IoT Service
 To run the example, you need to register one [AWS account](https://aws.amazon.com/)
