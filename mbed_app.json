@@ -12,31 +12,32 @@
             "mbed-trace.enable"                     : null,
             "nsapi.default-wifi-security"           : "WPA_WPA2",
             "nsapi.default-wifi-ssid"               : "\"SSID\"",
-            "nsapi.default-wifi-password"           : "\"Password\""
+            "nsapi.default-wifi-password"           : "\"PASSWORD\""
         },
         "NUMAKER_PFM_NUC472": {
             "target.network-default-interface-type" : "ETHERNET",
-            "my-tlssocket.tls-max-frag-len"         : 4
+            "my-tlssocket.tls-max-frag-len"         : 4,
+            "target.macros_add"                     : ["MBEDTLS_ENTROPY_HARDWARE_ALT"]
         },
         "NUMAKER_PFM_M487": {
             "target.network-default-interface-type" : "ETHERNET",
-            "my-tlssocket.tls-max-frag-len"         : 4
+            "my-tlssocket.tls-max-frag-len"         : 4,
+            "target.macros_add"                     : ["MBEDTLS_ENTROPY_HARDWARE_ALT"]
         },
         "NUMAKER_IOT_M487": {
             "target.network-default-interface-type" : "WIFI",
             "my-tlssocket.tls-max-frag-len"         : 4,
-            
             "esp8266.tx"                            : "PH_8",
             "esp8266.rx"                            : "PH_9",
             "esp8266.rts"                           : "A2",
             "esp8266.cts"                           : "A3",
             "esp8266.rst"                           : "PH_3",
-            "esp8266.provide-default"               : true
+            "esp8266.provide-default"               : true,
+            "target.macros_add"                     : ["MBEDTLS_ENTROPY_HARDWARE_ALT"]
         },
         "NU_PFM_M2351_NPSA_NS": {
             "target.network-default-interface-type" : "WIFI",
             "my-tlssocket.tls-max-frag-len"         : 4,
-
             "esp8266.tx"                            : "PD_1",
             "esp8266.rx"                            : "PD_0",
             "esp8266.rts"                           : "PD_3",
@@ -44,9 +45,7 @@
             "esp8266.rst"                           : "NC",
             "esp8266.pwr"                           : "PD_7",
             "esp8266.provide-default"               : true,
-
             "target.extra_labels_remove"            : ["NU_PREBUILD_SECURE"],
-
             "target.mbed_rom_start"                 : "0x10010000",
             "target.mbed_rom_size"                  : "0x70000",
             "target.mbed_ram_start"                 : "0x30002000",
@@ -55,7 +54,6 @@
         "NUMAKER_IOT_M263A": {
             "target.network-default-interface-type" : "WIFI",
             "my-tlssocket.tls-max-frag-len"         : 4,
-
             "esp8266.tx"                            : "PC_7",
             "esp8266.rx"                            : "PC_6",
             "esp8266.rts"                           : "PE_13",
