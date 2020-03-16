@@ -38,5 +38,13 @@
             "my-tlssocket.tls-max-frag-len"         : 4,
             "target.macros_add"                     : ["MBEDTLS_ENTROPY_HARDWARE_ALT"]
         }
+    },
+    "config": {
+        "crypto-prng-present": {
+            "help"              : "With MBEDTLS_ENTROPY_HARDWARE_ALT defined, entropy is implemented with EADC+PRNG alternatively. On rare targets without PRNG e.g. M482, disable this configuration option to go EADC+S/W random.",
+            "accepted_values"   : [0, 1],
+            "value"             : 1,
+            "macro_name"        : "NU_CRYPTO_PRNG_PRESENT"
+        }
     }
 }

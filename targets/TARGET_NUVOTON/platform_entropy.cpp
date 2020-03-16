@@ -23,11 +23,11 @@
 
 #if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
 
-/* Support entropy source with EADC seeded PRNG on non-PSA targets without TRNG
+/* Support entropy source with EADC seeded random on non-PSA targets without TRNG
  *
- * Follow the steps below to replace TRNG with EADC seeded PRNG:
+ * Follow the steps below to replace TRNG with EADC seeded random:
  *
- * 1. Seed PRNG with EADC band gap
+ * 1. Seed random generator with EADC band gap
  * 2. Define MBEDTLS_ENTROPY_HARDWARE_ALT and provide custom mbedtls_hardware_poll(...)
  *
  * Reference configuration in mbed_app.json:
@@ -49,10 +49,21 @@
  *
  *  "target.device_has_remove": ["TRNG"],
  *
- * WARNING: If the security level of EADC seeded PRNG cannot meet requirements, replace it with another entropy source.
+ * WARNING: If the security level of EADC seeded random generator cannot meet requirements, replace it with another entropy source.
+ *
+ * Select random generator between PRNG and S/W random:
+ *
+ * For targets with PRNG:
+ *  "crypto-prng-present": true,
+ * For targets without PRNG (e.g. M482):
+ *  "crypto-prng-present": false,
  */
 
+#if NU_CRYPTO_PRNG_PRESENT
 #include "crypto-misc.h"
+#else
+#include <stdlib.h>
+#endif
 
 extern "C" {
     int mbedtls_hardware_poll(void *data, unsigned char *output, size_t len, size_t *olen);
@@ -73,14 +84,18 @@ extern "C" {
     #define EADC_AUX_PINNAME        A0
     #define EADC_BANDGAP_SMPLMOD    7
     #define EADC_BANDGAP_CHN        8
+#if NU_CRYPTO_PRNG_PRESENT
     #define PRNG_KEYSIZE_ID         PRNG_KEY_SIZE_128
     #define PRNG_KEYSIZE            16
+#endif
 #elif TARGET_M480
     #define EADC_AUX_PINNAME        A0
     #define EADC_BANDGAP_SMPLMOD    16
     #define EADC_BANDGAP_CHN        16
+#if NU_CRYPTO_PRNG_PRESENT
     #define PRNG_KEYSIZE_ID         PRNG_KEY_SIZE_128
     #define PRNG_KEYSIZE            16
+#endif
 #else
     #error("Target not support")
 #endif
@@ -97,11 +112,11 @@ public:
     uint16_t read_bitstream();
 };
 
-class NuEADCSeedPRNG : private mbed::NonCopyable<NuEADCSeedPRNG>
+class NuEADCSeedRandom : private mbed::NonCopyable<NuEADCSeedRandom>
 {
 public:
-    NuEADCSeedPRNG();
-    ~NuEADCSeedPRNG();
+    NuEADCSeedRandom();
+    ~NuEADCSeedRandom();
 
     /* Get random data
      *
@@ -117,9 +132,9 @@ private:
 
 int mbedtls_hardware_poll(MBED_UNUSED void *data, unsigned char *output, size_t len, size_t *olen)
 {
-    static NuEADCSeedPRNG eadc_seed_prng;
+    static NuEADCSeedRandom eadc_seed_random;
 
-    return eadc_seed_prng.get_bytes(output, len, olen);
+    return eadc_seed_random.get_bytes(output, len, olen);
 }
 
 NuBandGap::NuBandGap() : mbed::AnalogIn(EADC_AUX_PINNAME)
@@ -161,10 +176,12 @@ uint16_t NuBandGap::read_bitstream()
     return one_or_zero;
 }
 
-NuEADCSeedPRNG::NuEADCSeedPRNG()
+NuEADCSeedRandom::NuEADCSeedRandom()
 {
+#if NU_CRYPTO_PRNG_PRESENT
     crypto_init();
     PRNG_ENABLE_INT();
+#endif
 
     uint32_t seed = 0;
     unsigned i = 32;
@@ -175,23 +192,30 @@ NuEADCSeedPRNG::NuEADCSeedPRNG()
         seed |= band_gap.read_bitstream();
     }
 
+#if NU_CRYPTO_PRNG_PRESENT
     /* PRNG reload seed */
     PRNG_Open(PRNG_KEYSIZE_ID, 1, seed);
+#else
+    srand(seed);
+#endif  /* #if NU_CRYPTO_PRNG_PRESENT */
 }
 
-NuEADCSeedPRNG::~NuEADCSeedPRNG()
+NuEADCSeedRandom::~NuEADCSeedRandom()
 {
+#if NU_CRYPTO_PRNG_PRESENT
     PRNG_DISABLE_INT();
     crypto_uninit();
+#endif /* #if NU_CRYPTO_PRNG_PRESENT */
 }
 
-int NuEADCSeedPRNG::get_bytes(unsigned char *output, size_t len, size_t *olen)
+int NuEADCSeedRandom::get_bytes(unsigned char *output, size_t len, size_t *olen)
 {
     /* Check argument validity */
     if (!output && len) {
         return -1;
     }
 
+#if NU_CRYPTO_PRNG_PRESENT
     unsigned char *output_ind = output;
     size_t rmn = len;
     uint32_t rand_data[PRNG_KEYSIZE / sizeof(uint32_t)];
@@ -208,6 +232,14 @@ int NuEADCSeedPRNG::get_bytes(unsigned char *output, size_t len, size_t *olen)
         output_ind += n;
         rmn -= n;
     }
+#else
+    unsigned char *output_ind = output;
+    size_t rmn = len;
+    while (rmn) {
+        *output_ind ++ = rand() % 256;
+        rmn --;
+    }
+#endif /* #if NU_CRYPTO_PRNG_PRESENT */
 
     if (olen) {
         *olen = len;
