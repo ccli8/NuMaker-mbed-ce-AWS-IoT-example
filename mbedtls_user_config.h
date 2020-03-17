@@ -42,7 +42,7 @@
 #endif /* TARGET_STM32F439xI && MBEDTLS_CONFIG_HW_SUPPORT */
 
 /* Maximum length (in bytes) of incoming plaintext fragments */
-#define MBEDTLS_SSL_IN_CONTENT_LEN      4096
+#define MBEDTLS_SSL_IN_CONTENT_LEN      8192 
 
 /* Maximum length (in bytes) of outgoing plaintext fragments */
-#define MBEDTLS_SSL_OUT_CONTENT_LEN     4096
+#define MBEDTLS_SSL_OUT_CONTENT_LEN     8192 
