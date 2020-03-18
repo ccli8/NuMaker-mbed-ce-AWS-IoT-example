@@ -159,6 +159,9 @@ const int MQTT_USER_BUFFER_SIZE = 600;
  * MQTT lib doesn't tell enough error message. Try to enlarge it. */
 const int MAX_MQTT_PACKET_SIZE = 1000;
 
+/* Timeout for receiving message with subscribed topic */
+const int MQTT_RECEIVE_MESSAGE_WITH_SUBSCRIBED_TOPIC_TIMEOUT_MS = 5000;
+
 #endif  // End of AWS_IOT_MQTT_TEST
 
 #if AWS_IOT_HTTPS_TEST
@@ -379,6 +382,9 @@ protected:
                 printf("\rMQTT subscribes to %s OK\n", *topic_filter);
             }
 
+            /* Clear count of received message with subscribed topic */
+            clear_message_arrive_count();
+
             MQTT::Message message;
 
             int _bpos;
@@ -407,10 +413,20 @@ protected:
             printf("\rMQTT publishes message to %s OK\n", topic);
         
             /* Receive message with subscribed topic */
+            printf("MQTT receives message with subscribed %s...\n", topic);
+            Timer timer;
+            timer.start();
             while (! _message_arrive_count) {
+                if (timer.read_ms() >= MQTT_RECEIVE_MESSAGE_WITH_SUBSCRIBED_TOPIC_TIMEOUT_MS) {
+                    printf("MQTT receives message with subscribed %s TIMEOUT\n", topic);
+                    break;
+                }
+
                 _mqtt_client->yield(100);
             }
-            clear_message_arrive_count();
+            if (_message_arrive_count) {
+                printf("MQTT receives message with subscribed %s OK\n", topic);
+            }
             printf("\n");
 
             /* Unsubscribe 
