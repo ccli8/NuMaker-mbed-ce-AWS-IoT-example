@@ -745,4 +745,10 @@ int main() {
     https_test->start_test();
     delete https_test;
 #endif  // End of AWS_IOT_HTTPS_TEST
+
+    /* Some cellular modems e.g.: QUECTEL EC2X need graceful exit; otherwise, they will break in next reboot. */
+    status = net->disconnect();
+    if (status != NSAPI_ERROR_OK) {
+        printf("\n\nDisconnect from network interface failed %d\n", status);
+    }
 }
