@@ -180,7 +180,11 @@ NuEADCSeedRandom::NuEADCSeedRandom()
 {
 #if NU_CRYPTO_PRNG_PRESENT
     crypto_init();
+#if TARGET_NUC472 || (MBED_MAJOR_VERSION < 6)
     PRNG_ENABLE_INT();
+#else
+    PRNG_ENABLE_INT(CRPT);
+#endif
 #endif
 
     uint32_t seed = 0;
@@ -194,7 +198,11 @@ NuEADCSeedRandom::NuEADCSeedRandom()
 
 #if NU_CRYPTO_PRNG_PRESENT
     /* PRNG reload seed */
+#if TARGET_NUC472 || (MBED_MAJOR_VERSION < 6)
     PRNG_Open(PRNG_KEYSIZE_ID, 1, seed);
+#else
+    PRNG_Open(CRPT, PRNG_KEYSIZE_ID, 1, seed);
+#endif
 #else
     srand(seed);
 #endif  /* #if NU_CRYPTO_PRNG_PRESENT */
@@ -203,7 +211,11 @@ NuEADCSeedRandom::NuEADCSeedRandom()
 NuEADCSeedRandom::~NuEADCSeedRandom()
 {
 #if NU_CRYPTO_PRNG_PRESENT
+#if TARGET_NUC472 || (MBED_MAJOR_VERSION < 6)
     PRNG_DISABLE_INT();
+#else
+    PRNG_DISABLE_INT(CRPT);
+#endif
     crypto_uninit();
 #endif /* #if NU_CRYPTO_PRNG_PRESENT */
 }
@@ -221,11 +233,18 @@ int NuEADCSeedRandom::get_bytes(unsigned char *output, size_t len, size_t *olen)
     uint32_t rand_data[PRNG_KEYSIZE / sizeof(uint32_t)];
     while (rmn) {
         crypto_prng_prestart();
+#if TARGET_NUC472 || (MBED_MAJOR_VERSION < 6)
         PRNG_Start();
+#else
+        PRNG_Start(CRPT);
+#endif
         crypto_prng_wait();
 
+#if TARGET_NUC472 || (MBED_MAJOR_VERSION < 6)
         PRNG_Read(rand_data);
-
+#else
+        PRNG_Read(CRPT, rand_data);
+#endif
         size_t n = (rmn >= PRNG_KEYSIZE) ? PRNG_KEYSIZE : rmn;
         memcpy(output_ind, rand_data, n);
         
