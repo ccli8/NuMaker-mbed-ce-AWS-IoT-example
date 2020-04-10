@@ -51,6 +51,16 @@
             "target.mbed_ram_start"                 : "0x30002000",
             "target.mbed_ram_size"                  : "0x16000"
         },
+        "NU_M2354_NPSA_NS": {
+            "target.network-default-interface-type" : "WIFI",
+            "my-tlssocket.tls-max-frag-len"         : 4,
+            "esp8266.tx"                            : "PC_7",
+            "esp8266.rx"                            : "PC_6",
+            "esp8266.rts"                           : "PE_13",
+            "esp8266.cts"                           : "PC_8",
+            "esp8266.rst"                           : "PC_13",
+            "esp8266.provide-default"               : true
+        },
         "NUMAKER_IOT_M263A": {
             "target.network-default-interface-type" : "WIFI",
             "my-tlssocket.tls-max-frag-len"         : 4,
