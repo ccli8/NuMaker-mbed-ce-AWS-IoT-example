@@ -60,6 +60,8 @@ extern "C" {
 
 void provision(void)
 {
+#if DEVICE_FLASH
+
     int kv_reset(const char *kvstore_path);
     
     /* Initialize kvstore */
@@ -117,7 +119,7 @@ void provision(void)
 
     printf("\rReset kvstore...OK\r\n");
 
-#if !DEVICE_TRNG && !TARGET_PSA
+#if !DEVICE_TRNG && !TARGET_PSA && !TARGET_PSA_Target
 #if !defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
     /* Inject trivial seed for development */
 
@@ -140,7 +142,7 @@ void provision(void)
 
     printf("\rInject NV seed...OK\r\n");
 #endif  /* !defined(MBEDTLS_ENTROPY_HARDWARE_ALT) */
-#endif  /* #if !DEVICE_TRNG && !TARGET_PSA */
+#endif  /* #if !DEVICE_TRNG && !TARGET_PSA && !TARGET_PSA_Target */
 
     /* Mark the device as provisioned */
     kv_status = inner_store->set(KV_KEY_PROVISION, "1", 1, KVStore::WRITE_ONCE_FLAG);
@@ -149,4 +151,6 @@ void provision(void)
     }
 
     printf("Provision for development...OK\r\n");
+
+#endif  /* #if DEVICE_FLASH */
 }

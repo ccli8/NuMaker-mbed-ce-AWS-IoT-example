@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#if !DEVICE_TRNG && !TARGET_PSA
+#if !DEVICE_TRNG && !TARGET_PSA && !TARGET_PSA_Target
  
 #include "mbed.h"
 #include "mbedtls/config.h"
