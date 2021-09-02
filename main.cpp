@@ -108,7 +108,9 @@ const char SSL_USER_PRIV_KEY_PEM[] = "-----BEGIN RSA PRIVATE KEY-----\n"
 #define AWS_IOT_MQTT_SERVER_PORT                8883
 
 #define AWS_IOT_MQTT_THINGNAME                  "Nuvoton-Mbed-D001"
-#define AWS_IOT_MQTT_CLIENTNAME                 "Nuvoton Client"
+
+/* Uncomment and assign one unique MQTT client name; otherwise, one random will be assigned. */
+//#define AWS_IOT_MQTT_CLIENTNAME                 "Nuvoton Client"
 
 /* User self-test topic */
 const char USER_MQTT_TOPIC[] = "Nuvoton/Mbed/D001";
@@ -151,6 +153,13 @@ const int MAX_MQTT_PACKET_SIZE = 1000;
 
 /* Timeout for receiving message with subscribed topic */
 const int MQTT_RECEIVE_MESSAGE_WITH_SUBSCRIBED_TOPIC_TIMEOUT_MS = 5000;
+
+#if !defined(AWS_IOT_MQTT_CLIENTNAME)
+#if TARGET_M23_NS
+extern "C"
+int mbedtls_hardware_poll( void *data, unsigned char *output, size_t len, size_t *olen );
+#endif
+#endif
 
 #endif  // End of AWS_IOT_MQTT_TEST
 
@@ -316,13 +325,37 @@ public:
             conn_data.MQTTVersion = 4;
             /* Version number of this structure. Must be 0 */
             conn_data.struct_version = 0;
+
             /* The message broker uses the client ID to identify each client. The client ID is passed
              * in from the client to the message broker as part of the MQTT payload. Two clients with
              * the same client ID are not allowed to be connected concurrently to the message broker.
              * When a client connects to the message broker using a client ID that another client is using,
              * a CONNACK message will be sent to both clients and the currently connected client will be
              * disconnected. */
+#if defined(AWS_IOT_MQTT_CLIENTNAME)
             conn_data.clientID.cstring = AWS_IOT_MQTT_CLIENTNAME;
+#else
+            char client_id_data[32];
+#if TARGET_M23_NS
+            /* FMC/UID lies in SPE and is inaccessible to NSPE. Use random to generate pseudo-unique instead. */
+            uint32_t rand_words[3];
+            size_t olen;
+            mbedtls_hardware_poll(NULL, (unsigned char *) rand_words, sizeof(rand_words), &olen);
+            snprintf(client_id_data, sizeof(client_id_data), "%08X-%08X-%08X",
+                     rand_words[0], rand_words[1], rand_words[2]);
+#else
+            /* Use FMC/UID to generate unique client ID */
+            SYS_UnlockReg();
+            FMC_Open();
+            snprintf(client_id_data, sizeof(client_id_data), "%08X-%08X-%08X",
+                     FMC_ReadUID(0), FMC_ReadUID(1), FMC_ReadUID(2));
+            FMC_Close();
+            SYS_LockReg();
+#endif
+            conn_data.clientID.cstring = client_id_data;
+#endif
+            printf("Resolved MQTT client ID: %s\n", conn_data.clientID.cstring);
+
             /* The message broker does not support persistent sessions (connections made with 
              * the cleanSession flag set to false. The AWS IoT message broker assumes all sessions 
              * are clean sessions and messages are not stored across sessions. If an MQTT client 
