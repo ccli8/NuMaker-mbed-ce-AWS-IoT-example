@@ -9,24 +9,7 @@ Currently, the following Nuvoton Mbed-enalbed boards can afford such memory foot
 - [NuMaker-PFM-NUC472](https://developer.mbed.org/platforms/Nuvoton-NUC472/)
 - [NuMaker-PFM-M487](https://developer.mbed.org/platforms/NUMAKER-PFM-M487/)
 - [NuMaker-IoT-M487](https://os.mbed.com/platforms/NUMAKER-IOT-M487/)
-- [NuMaker-PFM-M2351](https://os.mbed.com/platforms/NUMAKER-PFM-M2351/)
-
-### NuMaker-PFM-M2351
-NuMaker-PFM-M2351 is a Cortex-M23 based target which supports TrustZone.
-To develop on this target, user needs to build two codes: secure and non-secure.
-For secure code, there has been pre-built one in mbed-os tree.
-But its memory partition doesn't meet this example.
-This example excludes the pre-built secure code in mbed-os tree (see **.mbedignore**) and provides
-another one in **targets/TARGET_NUVOTON/TARGET_M2351/TARGET_NUMAKER_PFM_M2351**.
-To provide your own secure code, please follow the instructions in [NuMaker-mbed-TZ-secure-example](https://github.com/OpenNuvoton/NuMaker-mbed-TZ-secure-example).
-
-To build non-secure code for this example, run:
-```
-mbed compile -m NUMAKER_PFM_M2351 -t ARMC6
-```
-And you would get **NuMaker-mbed-AWS-IoT-example.hex**.
-
-To run this example, user needs to flash secure code like **NuMaker-mbed-TZ-secure-example.hex** first and then non-secure code **NuMaker-mbed-AWS-IoT-example.hex**.
+- [NuMaker-M2354](https://os.mbed.com/platforms/NUMAKER-M2354/)
 
 ## Access and manage AWS IoT Service
 To run the example, you need to register one [AWS account](https://aws.amazon.com/)
@@ -92,23 +75,22 @@ User public key has been included in user certificate and is not used here.
 1. Replace CA certificate with downloaded from the Console.
     ```
     const char SSL_CA_CERT_PEM[] = "-----BEGIN CERTIFICATE-----\n"
-        "MIIE0zCCA7ugAwIBAgIQGNrRniZ96LtKIVjNzGs7SjANBgkqhkiG9w0BAQUFADCB\n"
-        "yjELMAkGA1UEBhMCVVMxFzAVBgNVBAoTDlZlcmlTaWduLCBJbmMuMR8wHQYDVQQL\n"
+        "Replace Me"
     ```
 
 1. Replace user certificate with downloaded from the Console.
     ```
     const char SSL_USER_CERT_PEM[] = "-----BEGIN CERTIFICATE-----\n"
-        "MIIDWjCCAkKgAwIBAgIVALN/H7tr8cgpl2zwg0JjEE106XilMA0GCSqGSIb3DQEB\n"
-        "CwUAME0xSzBJBgNVBAsMQkFtYXpvbiBXZWIgU2VydmljZXMgTz1BbWF6b24uY29t\n"
+        "Replace Me"
     ```
 
 1. Replace user private key with downloaded from the Console.
     ```
     const char SSL_USER_PRIV_KEY_PEM[] = "-----BEGIN RSA PRIVATE KEY-----\n"
+        "Replace Me"
     ```
 
-**NOTE:** The credential hard-coded in source code is deactivated or deleted.
+**NOTE:** The credential hard-coded in source code may get deactivated or deleted.
           Use your own credential for connection with AWS IoT.
 
 ### Connect through MQTT
@@ -184,38 +166,26 @@ AWS IoT HTTPS protocol supports topic publish-only and RESTful API. The example 
     - Delete thing shadow RESTfully through HTTPS/DELETE method
 
 ## Monitor the application
-If you configure your terminal program with **9600/8-N-1**, you would see output similar to:
+If you configure your terminal program with **115200/8-N-1**, you would see output similar to:
 
 **NOTE:** Make sure that the network is functional before running the application.
 
 <pre>
 Starting AWS IoT test
-Using Mbed OS 5.7.1
-[EasyConnect] IPv4 mode
-Connecting with a1fbcwaqfqeozo.iot.us-east-1.amazonaws.com:8883
-Connecting to a1fbcwaqfqeozo.iot.us-east-1.amazonaws.com:8883
+Using Mbed OS 6.14.0
+Connected to the network successfully. IP address: 192.168.8.105
+Opening network socket on network stack
+Opens network socket on network stack OK
+DNS resolution for a1fljoeglhtf61-ats.iot.us-east-2.amazonaws.com...
+DNS resolution for a1fljoeglhtf61-ats.iot.us-east-2.amazonaws.com: 3.129.252.104:8883
 </pre>
 
 If you get here successfully, it means configurations with security credential are correct.
 <pre>
-Starting the TLS handshake...
-TLS connection to a1fbcwaqfqeozo.iot.us-east-1.amazonaws.com:8883 established
-Server certificate:
-    cert. version     : 3
-    serial number     : 3C:AC:B3:D3:3E:D8:6A:C9:2B:EF:D2:C5:B1:DC:BF:66
-    issuer name       : C=US, O=Symantec Corporation, OU=Symantec Trust Network, CN=Symantec Class 3 ECC 256 bit SSL CA - G2
-    subject name      : C=US, ST=Washington, L=Seattle, O=Amazon.com, Inc., CN=*.iot.us-east-1.amazonaws.com
-    issued  on        : 2017-03-07 00:00:00
-    expires on        : 2018-03-08 23:59:59
-    signed using      : ECDSA with SHA256
-    EC key size       : 256 bits
-    basic constraints : CA=false
-    subject alt name  : iot.us-east-1.amazonaws.com, *.iot.us-east-1.amazonaws.com
-    key usage         : Digital Signature
-    ext key usage     : TLS Web Server Authentication, TLS Web Client Authentication
-Certificate verification passed
-
-Connects with a1fbcwaqfqeozo.iot.us-east-1.amazonaws.com:8883 OK
+Connecting with a1fljoeglhtf61-ats.iot.us-east-2.amazonaws.com:8883
+Connects with a1fljoeglhtf61-ats.iot.us-east-2.amazonaws.com:8883 OK
+Resolved MQTT client ID: 002E0051-013B87F3-00000021
+MQTT connects OK
 </pre>
 
 MQTT handshake goes:
@@ -227,9 +197,11 @@ MQTT subscribes to Nuvoton/Mbed/+ OK
 Message to publish:
 { "message": "Hello from Nuvoton Mbed device" }
 MQTT publishes message to Nuvoton/Mbed/D001 OK
+MQTT receives message with subscribed Nuvoton/Mbed/D001...
 Message arrived: qos 1, retained 0, dup 0, packetid 1
 Payload:
 { "message": "Hello from Nuvoton Mbed device" }
+MQTT receives message with subscribed Nuvoton/Mbed/D001 OK
 
 MQTT unsubscribes from Nuvoton/Mbed/+ OK
 Subscribes/publishes user topic OK
@@ -240,9 +212,11 @@ MQTT subscribes to $aws/things/Nuvoton-Mbed-D001/shadow/update/rejected OK
 Message to publish:
 { "state": { "reported": { "attribute1": 3, "attribute2": "1" } } }
 MQTT publishes message to $aws/things/Nuvoton-Mbed-D001/shadow/update OK
+MQTT receives message with subscribed $aws/things/Nuvoton-Mbed-D001/shadow/update...
 Message arrived: qos 1, retained 0, dup 0, packetid 1
 Payload:
-{"state":{"reported":{"attribute1":3,"attribute2":"1"}},"metadata":{"reported":{"attribute1":{"timestamp":1514962195},"attribute2":{"timestamp":1514962195}}},"version":77,"timestamp":1514962195}
+{"state":{"reported":{"attribute1":3,"attribute2":"1"}},"metadata":{"reported":{"attribute1":{"timestamp":1630637720},"attribute2":{"timestamp":1630637720}}},"version":229,"timestamp":1630637720}
+MQTT receives message with subscribed $aws/things/Nuvoton-Mbed-D001/shadow/update OK
 
 MQTT unsubscribes from $aws/things/Nuvoton-Mbed-D001/shadow/update/accepted OK
 MQTT unsubscribes from $aws/things/Nuvoton-Mbed-D001/shadow/update/rejected OK
@@ -254,9 +228,11 @@ MQTT subscribes to $aws/things/Nuvoton-Mbed-D001/shadow/get/rejected OK
 Message to publish:
 
 MQTT publishes message to $aws/things/Nuvoton-Mbed-D001/shadow/get OK
+MQTT receives message with subscribed $aws/things/Nuvoton-Mbed-D001/shadow/get...
 Message arrived: qos 1, retained 0, dup 0, packetid 1
 Payload:
-{"state":{"reported":{"attribute1":3,"attribute2":"1"}},"metadata":{"reported":{"attribute1":{"timestamp":1514962195},"attribute2":{"timestamp":1514962195}}},"version":77,"timestamp":1514962198}
+{"state":{"reported":{"attribute1":3,"attribute2":"1"}},"metadata":{"reported":{"attribute1":{"timestamp":1630637720},"attribute2":{"timestamp":1630637720}}},"version":229,"timestamp":1630637722}
+MQTT receives message with subscribed $aws/things/Nuvoton-Mbed-D001/shadow/get OK
 
 MQTT unsubscribes from $aws/things/Nuvoton-Mbed-D001/shadow/get/accepted OK
 MQTT unsubscribes from $aws/things/Nuvoton-Mbed-D001/shadow/get/rejected OK
@@ -268,9 +244,11 @@ MQTT subscribes to $aws/things/Nuvoton-Mbed-D001/shadow/delete/rejected OK
 Message to publish:
 
 MQTT publishes message to $aws/things/Nuvoton-Mbed-D001/shadow/delete OK
+MQTT receives message with subscribed $aws/things/Nuvoton-Mbed-D001/shadow/delete...
 Message arrived: qos 1, retained 0, dup 0, packetid 1
 Payload:
-{"version":77,"timestamp":1514962202}
+{"version":229,"timestamp":1630637724}
+MQTT receives message with subscribed $aws/things/Nuvoton-Mbed-D001/shadow/delete OK
 
 MQTT unsubscribes from $aws/things/Nuvoton-Mbed-D001/shadow/delete/accepted OK
 MQTT unsubscribes from $aws/things/Nuvoton-Mbed-D001/shadow/delete/rejected OK
@@ -279,74 +257,50 @@ Subscribes/publishes DeleteThingShadow topic OK
 MQTT disconnects OK
 </pre>
 
-Dynamic memory footprint (heap) is output below.
-Static memory footprint (global/stack) could be obtained by inspecting MAP file.
-You could get total memory footprint by adding these two together.
-<pre>
-Current heap size: 1351
-Max heap size: 63022
-</pre>
-
 ## Trouble-shooting
-- Over ESP8266 WiFi,
-  if you make a loop test like below (`main.cpp`), you may always meet errors in the following loops
-  after some network error has happened in the previous one.
-    <pre>
-    <b>while (true) {</b>
-        #if AWS_IOT_MQTT_TEST
-            AWS_IoT_MQTT_Test *mqtt_test = new AWS_IoT_MQTT_Test(AWS_IOT_MQTT_SERVER_NAME, AWS_IOT_MQTT_SERVER_PORT, network);
-            mqtt_test->start_test();
-            delete mqtt_test;
-        #endif  // End of AWS_IOT_MQTT_TEST
-    
-        #if AWS_IOT_HTTPS_TEST
-            AWS_IoT_HTTPS_Test *https_test = new AWS_IoT_HTTPS_Test(AWS_IOT_HTTPS_SERVER_NAME, AWS_IOT_HTTPS_SERVER_PORT, network);
-            https_test->start_test();
-            delete https_test;
-        #endif  // End of AWS_IOT_HTTPS_TEST
-    <b>}</b>
-    </pre>
-    This issue would be caused by failure of ESP8266 AT commands **CLOSE**/**DISCONNECT**
-    because ESP8266 F/W is still busy in handling previous unfinished network transfer
-    due to bad network status and fails these commands.
-    These commands must be OK for ESP8266 F/W to reset connection state correctly.
-    If that happens, try enlarging [ESP8266 driver's](https://github.com/ARMmbed/esp8266-driver) timeout configuration.
-    For example, enlarge `ESP8266_SEND_TIMEOUT`/`ESP8266_RECV_TIMEOUT`/`ESP8266_MISC_TIMEOUT` (defined in
-    [ESP8266Interface.cpp](https://github.com/ARMmbed/esp8266-driver/blob/master/ESP8266Interface.cpp))
-    to 5000/5000/5000 ms respectively (through `mbed_app.json`).
-    <pre>
-    {
-        "macros": [
-            "MBED_CONF_APP_MAIN_STACK_SIZE=4096",
-            "MBEDTLS_USER_CONFIG_FILE=\"mbedtls_user_config.h\"",
-            "MBED_HEAP_STATS_ENABLED=1",
-            "MBED_MEM_TRACING_ENABLED=1",
-            <b>"ESP8266_SEND_TIMEOUT=5000",</b>
-            <b>"ESP8266_RECV_TIMEOUT=5000",</b>
-            <b>"ESP8266_MISC_TIMEOUT=5000"</b>
-        ],
-        "config": {
-    </pre>
-    
--   Reduce memory footprint according to RFC 6066 TLS extension
-    `MBEDTLS_SSL_IN_CONTENT_LEN`/`MBEDTLS_SSL_OUT_CONTENT_LEN` determine the sizes of incoming/outgoing TLS I/O buffers.
-    We reduce the sizes by default according to RFC 6066:
-    1. Enable RFC 6066 max_fragment_length extension.
-    1. Reduce `MBEDTLS_SSL_IN_CONTENT_LEN`/`MBEDTLS_SSL_OUT_CONTENT_LEN` to 4KiB/4KiB from 16KiB/16KiB.
+-   Reduce memory footprint according to RFC 6066 TLS extension.
+    We reduce memory footprint by:
+    1. Enabling RFC 6066 max_fragment_length extension by configuing `my-tlssocket.tls-max-frag-len` to 4.
+
+        `my-tlssocket/mbed_lib.json`:
+        ```json
+        {
+            "name": "my-tlssocket",
+            "config": {
+                "tls-max-frag-len": {
+                    "help": "Maximum fragment length value for the payload in one packet, doesn't include TLS header and encryption overhead. Is needed for constrained devices having low MTU sizes, Value 0 = disabled, 1 = MBEDTLS_SSL_MAX_FRAG_LEN_512, 2= MBEDTLS_SSL_MAX_FRAG_LEN_1024, 3 = MBEDTLS_SSL_MAX_FRAG_LEN_2048, 4 = MBEDTLS_SSL_MAX_FRAG_LEN_4096",
+                    "value": 0
+                },
+            }
+        }
+        ```
+
+        `mbed_app.json`:
+        ```json
+        "SOME_TARGET": {
+            "my-tlssocket.tls-max-frag-len"         : 4,
+        },
+        ```
+
+    1. Consistent with above, allocating these buffers with `MBEDTLS_SSL_IN_CONTENT_LEN`/`MBEDTLS_SSL_OUT_CONTENT_LEN` being larger than 4KiB/4KiB.
+
+        `mbedtls_user_config.h`:
+        ```C++
+        /* Maximum length (in bytes) of incoming plaintext fragments */
+        #define MBEDTLS_SSL_IN_CONTENT_LEN      8192 
+
+        /* Maximum length (in bytes) of outgoing plaintext fragments */
+        #define MBEDTLS_SSL_OUT_CONTENT_LEN     8192 
+        ```
+
+    **NOTE:**: With `my-tlssocket.tls-max-frag-len` being 4, `MBEDTLS_SSL_IN_CONTENT_LEN`/`MBEDTLS_SSL_OUT_CONTENT_LEN` must be larger than 4KiB/4KiB.
+    We enlarge them to 8KiB/8KiB because TLS handshake also uses these buffers and may require larger.
 
     But this approach is risky because:
     1. AWS IoT doesn't support RFC 6066 TLS extension yet.
-    1. TLS handshake may need larger I/O buffers than configured 4KiB/4KiB.
+    1. TLS handshake may need larger I/O buffers than configured.
 
     If you doubt your trouble is caused by this configuration, disable it by:
-    1.  Remove the line `my-tlssocket.tls-max-frag-len` in `mbed_app.json`.
-        ```json
-        "NUMAKER_PFM_NUC472": {
-            "target.network-default-interface-type" : "ETHERNET",
-            "target.macros_add": [
-                "ESP8266_AT_SEL=ESP8266_AT_EXTERN"
-            ]
-        },
-        ```
-    1.  Comment out `MBEDTLS_SSL_IN_CONTENT_LEN`/`MBEDTLS_SSL_OUT_CONTENT_LEN` in `mbedtls_user_config.h`.
+    1.  Removing the line `my-tlssocket.tls-max-frag-len` in `mbed_app.json`.
+    1.  Commenting out `MBEDTLS_SSL_IN_CONTENT_LEN`/`MBEDTLS_SSL_OUT_CONTENT_LEN` in `mbedtls_user_config.h`.
         This will change back to 16KiB/16KiB.

@@ -20,11 +20,13 @@
 #include "mbedtls/config.h"
 #include "entropy_poll.h"
 //#include "psa/crypto.h"
+#if DEVICE_FLASH
 #include "kvstore_global_api.h"
 #include "KVStore.h"
 #include "TDBStore.h"
 #include "KVMap.h"
 #include "kv_config.h"
+#endif
 
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
