@@ -19,6 +19,16 @@
             "my-tlssocket.tls-max-frag-len"         : 4,
             "target.macros_add"                     : ["MBEDTLS_ENTROPY_HARDWARE_ALT"]
         },
+        "NUMAKER_IOT_M467": {
+            "target.network-default-interface-type" : "WIFI",
+            "my-tlssocket.tls-max-frag-len"         : 4,
+            "esp8266.tx"                            : "PC_1",
+            "esp8266.rx"                            : "PC_0",
+            "esp8266.rts"                           : "PC_3",
+            "esp8266.cts"                           : "PC_2",
+            "esp8266.rst"                           : "PC_4",
+            "esp8266.provide-default"               : true
+        },
         "NUMAKER_PFM_M487": {
             "target.network-default-interface-type" : "ETHERNET",
             "my-tlssocket.tls-max-frag-len"         : 4,
