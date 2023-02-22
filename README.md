@@ -10,6 +10,7 @@ Currently, the following Nuvoton Mbed-enalbed boards can afford such memory foot
 - [NuMaker-PFM-M487](https://developer.mbed.org/platforms/NUMAKER-PFM-M487/)
 - [NuMaker-IoT-M487](https://os.mbed.com/platforms/NUMAKER-IOT-M487/)
 - [NuMaker-M2354](https://os.mbed.com/platforms/NUMAKER-M2354/)
+- [NuMaker-IoT-M467](https://os.mbed.com/platforms/NUMAKER-IOT-M467/)
 
 ## Access and manage AWS IoT Service
 To run the example, you need to register one [AWS account](https://aws.amazon.com/)
