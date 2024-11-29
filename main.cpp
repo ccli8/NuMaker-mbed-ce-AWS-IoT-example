@@ -22,6 +22,18 @@
 #include "MQTTClient.h"
 #endif  // End of AWS_IOT_MQTT_TEST
 
+#if COMPONENT_RHE6616TP01_LCD
+#include "lcd_api.h"
+#include "lcdlib.h"
+#endif
+
+#if COMPONENT_BME680
+#include "mbed_bme680.h"
+
+#if TARGET_NU_IOT_M2354
+BME680 bme680(PB_12, PB_13, 0x76 << 1);  // Slave address
+#endif
+#endif
 
 namespace {
 
@@ -112,6 +124,8 @@ const char SSL_USER_PRIV_KEY_PEM[] = "-----BEGIN RSA PRIVATE KEY-----\n"
 /* Uncomment and assign one unique MQTT client name; otherwise, one random will be assigned. */
 //#define AWS_IOT_MQTT_CLIENTNAME                 "Nuvoton Client"
 
+#if !COMPONENT_BME680
+
 /* User self-test topic */
 const char USER_MQTT_TOPIC[] = "Nuvoton/Mbed/D001";
 const char *USER_MQTT_TOPIC_FILTERS[] = {
@@ -142,6 +156,20 @@ const char *DELETETHINGSHADOW_MQTT_TOPIC_FILTERS[] = {
     "$aws/things/" AWS_IOT_MQTT_THINGNAME "/shadow/delete/rejected"
 };
 const char DELETETHINGSHADOW_MQTT_TOPIC_PUBLISH_MESSAGE[] = "";
+
+#else
+    
+/* Update thing shadow */
+const char UPDATETHINGSHADOW_MQTT_TOPIC[] = "$aws/things/" AWS_IOT_MQTT_THINGNAME "/shadow/update";
+const char *UPDATETHINGSHADOW_MQTT_TOPIC_FILTERS[] = {
+    "$aws/things/" AWS_IOT_MQTT_THINGNAME "/shadow/update/accepted",
+    "$aws/things/" AWS_IOT_MQTT_THINGNAME "/shadow/update/rejected"
+};
+
+//const char UPDATETHINGSHADOW_MQTT_TOPIC_PUBLISH_MESSAGE[] = "{ \"state\": { \"reported\": { \"temperature\": %2.2f } } }";
+const char UPDATETHINGSHADOW_MQTT_TOPIC_PUBLISH_MESSAGE[] = "{ \"state\": { \"reported\": { \"clientName\":\"%s\", \"temperature\": %2.2f, \"humidity\": %2.2f, \"pressure\": %.2f } } }";
+
+#endif  /* #if !COMPONENT_BME680 */
 
 /* MQTT user buffer size */
 const int MQTT_USER_BUFFER_SIZE = 600;
@@ -260,6 +288,7 @@ public:
 
         int tls_rc;
         int mqtt_rc;
+        char cClientName[32];
 
         do {
             /* Set host name of the remote host, used for certificate checking */
@@ -375,12 +404,41 @@ public:
             }
             printf("\rMQTT connects OK\n\n");
 
+#if COMPONENT_RHE6616TP01_LCD
+            /* MQTT connects OK set default LCD display. */
+            char text [8];
+
+            LCD_DisableBlink();
+            lcd_printf(ZONE_MAIN_DIGIT,"   OK");
+            thread_sleep_for(800);
+            lcd_printf(ZONE_MAIN_DIGIT,"");
+            lcd_setSymbol(SYMBOL_NVT, 1);
+            lcd_printNumber(ZONE_VER_DIGIT, 101);
+            lcd_setSymbol(SYMBOL_VERSION, 1);
+            lcd_setSymbol(SYMBOL_VER_DIG_P1, 1); 
+            /* Show default pressure, hPa */
+            sprintf(text, "%4dhPa", 0000);
+            lcd_printf(ZONE_MAIN_DIGIT, text);
+            /* Show default humidity, %rH */
+            lcd_printNumberEx(ZONE_PPM_DIGIT, 00, 2);
+            lcd_setSymbol(SYMBOL_PERCENTAGE, 1);
+            /* Show default temperature, degC */    
+            lcd_printNumberEx(ZONE_TEMP_DIGIT, 00, 2);
+            lcd_setSymbol(SYMBOL_TEMP_C, 1);
+            lcd_setSymbol(SYMBOL_WIFI, 1);
+#endif
+
+#if !COMPONENT_BME680
+
             /* Subscribe/publish user topic */
             printf("Subscribing/publishing user topic\n");
             if (! sub_pub_topic(USER_MQTT_TOPIC, USER_MQTT_TOPIC_FILTERS, sizeof (USER_MQTT_TOPIC_FILTERS) / sizeof (USER_MQTT_TOPIC_FILTERS[0]), USER_MQTT_TOPIC_PUBLISH_MESSAGE)) {
                 break;
             }
             printf("Subscribes/publishes user topic OK\n\n");
+#if COMPONENT_RHE6616TP01_LCD
+            lcd_printf(ZONE_MAIN_DIGIT, "USER OK");
+#endif
 
             /* Subscribe/publish UpdateThingShadow topic */
             printf("Subscribing/publishing UpdateThingShadow topic\n");
@@ -388,6 +446,9 @@ public:
                 break;
             }
             printf("Subscribes/publishes UpdateThingShadow topic OK\n\n");
+#if COMPONENT_RHE6616TP01_LCD
+            lcd_printf(ZONE_MAIN_DIGIT, "UPDATE OK");
+#endif
 
             /* Subscribe/publish GetThingShadow topic */
             printf("Subscribing/publishing GetThingShadow topic\n");
@@ -395,6 +456,9 @@ public:
                 break;
             }
             printf("Subscribes/publishes GetThingShadow topic OK\n\n");
+#if COMPONENT_RHE6616TP01_LCD
+            lcd_printf(ZONE_MAIN_DIGIT, "GET OK");
+#endif
 
             /* Subscribe/publish DeleteThingShadow topic */
             printf("Subscribing/publishing DeleteThingShadow topic\n");
@@ -402,8 +466,65 @@ public:
                 break;
             }
             printf("Subscribes/publishes DeleteThingShadow topic OK\n\n");
+#if COMPONENT_RHE6616TP01_LCD
+            lcd_printf(ZONE_MAIN_DIGIT, "DEL OK");
+#endif
 
+#endif  /* #if !COMPONENT_BME680 */
         } while (0);
+
+#if COMPONENT_BME680
+
+        char cDataBuffer[ 256 ];
+#if COMPONENT_RHE6616TP01_LCD
+        char cLcdStr [8];
+#endif
+        uint32_t pressure, humidity, temperature;
+        do {
+            /* Subscribe/publish UpdateThingShadow topic */
+            printf("Subscribing/publishing UpdateThingShadow topic\n");
+            if (bme680.performReading()) {
+//                ( void ) snprintf(cDataBuffer, sizeof(cDataBuffer) - 1, UPDATETHINGSHADOW_MQTT_TOPIC_PUBLISH_MESSAGE, bme680.getHumidity() );
+                ( void ) snprintf(cDataBuffer, sizeof(cDataBuffer) - 1, UPDATETHINGSHADOW_MQTT_TOPIC_PUBLISH_MESSAGE, cClientName, bme680.getTemperature(), bme680.getHumidity(), bme680.getPressure() );
+                if (! sub_pub_topic(UPDATETHINGSHADOW_MQTT_TOPIC, UPDATETHINGSHADOW_MQTT_TOPIC_FILTERS, sizeof (UPDATETHINGSHADOW_MQTT_TOPIC_FILTERS) / sizeof (UPDATETHINGSHADOW_MQTT_TOPIC_FILTERS[0]), (const char*)cDataBuffer)) {
+                    break;
+                }
+                printf("Subscribes/publishes UpdateThingShadow topic OK\n\n");
+                temperature = bme680.getTemperature();
+                pressure = bme680.getPressure()/100;
+                humidity = bme680.getHumidity();
+#if COMPONENT_RHE6616TP01_LCD
+                sprintf(cLcdStr, "%4dhPa", (int)pressure);
+                lcd_printf(ZONE_MAIN_DIGIT, cLcdStr);
+                lcd_printNumberEx(ZONE_TEMP_DIGIT,temperature,2);
+                lcd_printNumberEx(ZONE_PPM_DIGIT, humidity, 2);
+#endif
+            } else {
+                printf("Read Sensor failed \n\n");
+#if COMPONENT_RHE6616TP01_LCD
+                lcd_printf(ZONE_MAIN_DIGIT, "SENSOR FAIL");
+#endif
+            }
+            thread_sleep_for(500);
+            /*  RTC display  */
+            time_t rtctt;
+            char buffer[32];
+            uint32_t u32TimeData, u32TimeHour, u32TimeMinute;
+            rtctt = rtc_read();
+            strftime(buffer, 32, "%H:%M\n", localtime(&rtctt));
+            printf("Time as a custom formatted string = %s", buffer);
+
+            strftime(buffer, 32, "%H\n", localtime(&rtctt));
+            u32TimeHour = atoi(buffer);
+            strftime(buffer, 32, "%M\n", localtime(&rtctt));
+            u32TimeMinute = atoi(buffer);
+            u32TimeData = ( u32TimeHour *100) + u32TimeMinute ;
+#if COMPONENT_RHE6616TP01_LCD
+            lcd_printNumber(ZONE_TIME_DIGIT, u32TimeData);
+#endif
+        } while (1);
+
+#endif  /* #if COMPONENT_BME680 */
 
         printf("MQTT disconnecting");
         if ((mqtt_rc = _mqtt_client->disconnect()) != 0) {
@@ -806,6 +927,51 @@ protected:
 
 #endif  // End of AWS_IOT_HTTPS_TEST
 
+#if COMPONENT_RHE6616TP01_LCD
+Ticker flipper;
+static volatile uint32_t g_u32RTCINT = 0;
+
+/* Add tikcer for symbol ":" blinking 1/sec  */
+void flip()
+{
+    g_u32RTCINT++;
+    if(g_u32RTCINT == 1)
+        lcd_setSymbol(SYMBOL_TIME_DIG_COL1, 1);
+    else{
+        g_u32RTCINT = 0;    
+        lcd_setSymbol(SYMBOL_TIME_DIG_COL1, 0);}
+}
+#endif
+
+#if COMPONENT_BME680
+static void sensor_test() {
+    int count = 10;
+   
+    if (!bme680.begin()) {
+        printf("BME680 Begin failed \r\n");
+        return;
+    }
+    do {
+        if (++count >= 10)
+        {
+            count = 0;
+            printf("\r\nTemperature  Humidity  Pressure    VOC\r\n"
+                   "    degC        %%        hPa      KOhms\r\n"
+                   "------------------------------------------\r\n");
+        }
+ 
+        if (bme680.performReading())
+        {
+            printf("   %.2f      ", bme680.getTemperature());
+            printf("%.2f    ", bme680.getHumidity());
+            printf("%.2f    ", bme680.getPressure() / 100.0);
+            printf("%0.2f\r\n", bme680.getGasResistance() / 1000.0);
+        }
+        thread_sleep_for(1000);
+    } while(0);
+}
+#endif
+
 int main() {
 
     /* The default 9600 bps is too slow to print full TLS debug info and could
@@ -813,15 +979,62 @@ int main() {
 
     printf("\nStarting AWS IoT test\n");
 
+#if COMPONENT_RHE6616TP01_LCD
+    printf("Enable LCD program ...\r\n");
+    lcd_init();
+
+    lcd_printf(ZONE_MAIN_DIGIT, "START");
+    thread_sleep_for(2000);
+    lcd_printf(ZONE_MAIN_DIGIT, "");
+#endif
+
+#if COMPONENT_BME680
+    sensor_test();
+#endif
+
 #if defined(MBED_MAJOR_VERSION)
     printf("Using Mbed OS %d.%d.%d\n", MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION);
 #else
     printf("Using Mbed OS from master.\n");
 #endif
 
+#if COMPONENT_RHE6616TP01_LCD
+    lcd_printf(ZONE_MAIN_DIGIT, "CONNECT");
+    LCD_EnableBlink(500);
+#endif
+
+#if COMPONENT_RHE6616TP01_LCD
+    /* lcd showing RTC */
+    //set_time(1256729737);
+    time_t rtctt;
+    char buffer[32];
+    uint32_t u32TimeData, u32TimeHour, u32TimeMinute;
+    rtc_init();
+    rtctt = rtc_read();
+
+    printf("this as seconds since january 1, 1970 =%d\n", (int)rtctt);
+
+    strftime(buffer, 32, "%H:%M\n", localtime(&rtctt));
+    printf("Time as a custom formatted string = %s", buffer);
+
+    strftime(buffer, 32, "%H\n", localtime(&rtctt));
+    u32TimeHour = atoi(buffer);
+    strftime(buffer, 32, "%M\n", localtime(&rtctt));
+    u32TimeMinute = atoi(buffer);
+    u32TimeData = ( u32TimeHour *100) + u32TimeMinute ;
+    lcd_setSymbol(SYMBOL_TIME_DIG_COL1, 1);
+    lcd_printNumber(ZONE_TIME_DIGIT, u32TimeData);
+    flipper.attach(&flip, 500ms);   
+#endif
+
     NetworkInterface *net = NetworkInterface::get_default_instance();
     if (NULL == net) {
         printf("Connecting to the network failed. See serial output.\n");
+#if COMPONENT_RHE6616TP01_LCD
+        LCD_DisableBlink();
+        thread_sleep_for(800);
+        lcd_printf(ZONE_MAIN_DIGIT, "  FAIL");
+#endif
         return 1;
     }
     nsapi_error_t status = net->connect();
@@ -854,4 +1067,7 @@ int main() {
     if (status != NSAPI_ERROR_OK) {
         printf("\n\nDisconnect from network interface failed %d\n", status);
     }
+#if COMPONENT_RHE6616TP01_LCD
+    lcd_printf(ZONE_MAIN_DIGIT, "   End");
+#endif
 }
