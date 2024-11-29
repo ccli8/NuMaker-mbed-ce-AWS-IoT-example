@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2024, Nuvoton Technology Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /* This example demonstrates connection with AWS IoT through MQTT/HTTPS protocol. 
  *
  * AWS IoT: Thing Shadow MQTT Topics 
@@ -10,107 +28,54 @@
  * http://docs.aws.amazon.com/iot/latest/developerguide/thing-shadow-rest-api.html
  */
 
-#define AWS_IOT_MQTT_TEST       1
-#define AWS_IOT_HTTPS_TEST      0
-
 #include "mbed.h"
 #include "MyTLSSocket.h"
 
-#if AWS_IOT_MQTT_TEST
+/* AWS IoT user configuration header file */
+#include "configs/awsiot_user_config.h"
+/* AWS IoT credentials */
+#include "configs/awsiot_credentials.h"
+
+#define WIFI 2
+#if (MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == WIFI )
+extern "C" {
+    MBED_WEAK int fetch_host_command(void);
+}
+
+#if TARGET_PSA_Target
+#include "psa/protected_storage.h"
+/* User-managed UID for PS/ITS storage */
+psa_storage_uid_t uid_wifi_ssid = 0x5a5b0001;
+psa_storage_uid_t uid_wifi_passwd = 0x5a5b0002;
+uint8_t data_wifi_ssid[16];
+uint8_t data_wifi_passwd[16];
+#endif
+#endif
+
+#if AWS_IOT_MQTTS_TEST
 /* MQTT-specific header files */
 #include "MQTTmbed.h"
 #include "MQTTClient.h"
-#endif  // End of AWS_IOT_MQTT_TEST
+#endif  // End of AWS_IOT_MQTTS_TEST
 
+#if COMPONENT_RHE6616TP01_LCD
+#include "lcd_api.h"
+#include "lcdlib.h"
+#endif
+
+#if COMPONENT_BME680
+#include "mbed_bme680.h"
+
+#if TARGET_NU_IOT_M2354
+BME680 bme680(PB_12, PB_13, 0x76 << 1);  // Slave address
+#endif
+#endif
 
 namespace {
+    
+#if AWS_IOT_MQTTS_TEST
 
-/* List of trusted root CA certificates
- * currently only GlobalSign, the CA for os.mbed.com
- *
- * To add more than one root, just concatenate them.
- */
-const char SSL_CA_CERT_PEM[] = "-----BEGIN CERTIFICATE-----\n"
-    "MIIDQTCCAimgAwIBAgITBmyfz5m/jAo54vB4ikPmljZbyjANBgkqhkiG9w0BAQsF\n"
-    "ADA5MQswCQYDVQQGEwJVUzEPMA0GA1UEChMGQW1hem9uMRkwFwYDVQQDExBBbWF6\n"
-    "b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL\n"
-    "MAkGA1UEBhMCVVMxDzANBgNVBAoTBkFtYXpvbjEZMBcGA1UEAxMQQW1hem9uIFJv\n"
-    "b3QgQ0EgMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALJ4gHHKeNXj\n"
-    "ca9HgFB0fW7Y14h29Jlo91ghYPl0hAEvrAIthtOgQ3pOsqTQNroBvo3bSMgHFzZM\n"
-    "9O6II8c+6zf1tRn4SWiw3te5djgdYZ6k/oI2peVKVuRF4fn9tBb6dNqcmzU5L/qw\n"
-    "IFAGbHrQgLKm+a/sRxmPUDgH3KKHOVj4utWp+UhnMJbulHheb4mjUcAwhmahRWa6\n"
-    "VOujw5H5SNz/0egwLX0tdHA114gk957EWW67c4cX8jJGKLhD+rcdqsq08p8kDi1L\n"
-    "93FcXmn/6pUCyziKrlA4b9v7LWIbxcceVOF34GfID5yHI9Y/QCB/IIDEgEw+OyQm\n"
-    "jgSubJrIqg0CAwEAAaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMC\n"
-    "AYYwHQYDVR0OBBYEFIQYzIU07LwMlJQuCFmcx7IQTgoIMA0GCSqGSIb3DQEBCwUA\n"
-    "A4IBAQCY8jdaQZChGsV2USggNiMOruYou6r4lK5IpDB/G/wkjUu0yKGX9rbxenDI\n"
-    "U5PMCCjjmCXPI6T53iHTfIUJrU6adTrCC2qJeHZERxhlbI1Bjjt/msv0tadQ1wUs\n"
-    "N+gDS63pYaACbvXy8MWy7Vu33PqUXHeeE6V/Uq2V8viTO96LXFvKWlJbYK8U90vv\n"
-    "o/ufQJVtMVT8QtPHRh8jrdkPSHCa2XV4cdFyQzR1bldZwgJcJmApzyMZFo6IQ6XU\n"
-    "5MsI+yMRQ+hDKXJioaldXgjUkK642M4UwtBV8ob2xJNDd2ZhwLnoQdeXeGADbkpy\n"
-    "rqXRfboQnoZsG4q5WTP468SQvvG5\n"
-    "-----END CERTIFICATE-----\n";
-
-/* User certificate which has been activated and attached with specific thing and policy */
-const char SSL_USER_CERT_PEM[] = "-----BEGIN CERTIFICATE-----\n"
-    "MIIDWTCCAkGgAwIBAgIUAzDIpEQWV/yKVo8suGhvjmFY0n4wDQYJKoZIhvcNAQEL\n"
-    "BQAwTTFLMEkGA1UECwxCQW1hem9uIFdlYiBTZXJ2aWNlcyBPPUFtYXpvbi5jb20g\n"
-    "SW5jLiBMPVNlYXR0bGUgU1Q9V2FzaGluZ3RvbiBDPVVTMB4XDTE4MDQxNzA5NDMx\n"
-    "M1oXDTQ5MTIzMTIzNTk1OVowHjEcMBoGA1UEAwwTQVdTIElvVCBDZXJ0aWZpY2F0\n"
-    "ZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKsLlECiw4ud5laejJmL\n"
-    "bBhafKLdCRx6tkcjBYyEUoAC3Qs2ogqGngQgjU4QJoWpEBO/U1M+e1QtlZ2o/CiL\n"
-    "MViHA3rYvP86N/TH8pFA3aPKaeEp+WIt5v4OXdfPkVNKTotiRuRCpzRzrY4xKp11\n"
-    "ouKkVKf3FcNuKIMt/uEhje90KofBbFHQY3HFYe19qIg1m/IBV+npmNlAKElGNSB7\n"
-    "xHHLzzUuue38s+ceJyzsWuPjFiVYoeyPHF8gDVWf28XJ4KUFs80Deycqe9efroud\n"
-    "cQY/6aLDWDJXHvhenwoAIbHqUsYRoWoanrg5Cq3id5+pzVkadNV3+x9bGwROhpbQ\n"
-    "M9ECAwEAAaNgMF4wHwYDVR0jBBgwFoAUVUXg3+Dd1qSnAT9LN413zSdNoE0wHQYD\n"
-    "VR0OBBYEFIx86SOxw5k/50GtyRjUwlj+9d1gMAwGA1UdEwEB/wQCMAAwDgYDVR0P\n"
-    "AQH/BAQDAgeAMA0GCSqGSIb3DQEBCwUAA4IBAQCI1fqqjvLAFzL2E1nvWMrkaWN2\n"
-    "EQK44uOcw53ZzgNNH7fJ85BW8T2l1yZx/Blgs10pEp7vmccnRoR7nYbUGO8++9nG\n"
-    "S7bfZhiaE2syJqqvLwPGdqR6fvDdfEpmhgJ1CqeMCqun9XZvUTsgBn7Sqqz7P99h\n"
-    "gGmDRKS/CtsPai0Df0ZPNuV/YuUkpHKJSDm+ZTnzevMS3KXkG1cc/sIuc4IwF+aj\n"
-    "nbyzdC2fN0r+34srQ8/9aXezOTQ0NBWtoJCCkD+LL6PYJJkAgLA2jcbcbuRJUQ7n\n"
-    "Zsp25kKX40fuyIcgPRsd/7sao3zTVYxwKy8r6/mbgrPiMeHvJZ8y3nwUpsPO\n"
-    "-----END CERTIFICATE-----\n";
-
-/* User private key paired with above */
-const char SSL_USER_PRIV_KEY_PEM[] = "-----BEGIN RSA PRIVATE KEY-----\n"
-    "MIIEowIBAAKCAQEAqwuUQKLDi53mVp6MmYtsGFp8ot0JHHq2RyMFjIRSgALdCzai\n"
-    "CoaeBCCNThAmhakQE79TUz57VC2Vnaj8KIsxWIcDeti8/zo39MfykUDdo8pp4Sn5\n"
-    "Yi3m/g5d18+RU0pOi2JG5EKnNHOtjjEqnXWi4qRUp/cVw24ogy3+4SGN73Qqh8Fs\n"
-    "UdBjccVh7X2oiDWb8gFX6emY2UAoSUY1IHvEccvPNS657fyz5x4nLOxa4+MWJVih\n"
-    "7I8cXyANVZ/bxcngpQWzzQN7Jyp715+ui51xBj/posNYMlce+F6fCgAhsepSxhGh\n"
-    "ahqeuDkKreJ3n6nNWRp01Xf7H1sbBE6GltAz0QIDAQABAoIBAAzl7KILJA/NMmdp\n"
-    "wVR6zQXxHODzJhK9ti0bGPoFqGr6zExiLEn66MOK6NzwHteJbirvDIuEdKxeW5/t\n"
-    "9EXiaTAxzjNfULE2ZK3Svhnx+ES3qNBP5/xdVcPmtXDmuCC9w7qDCLGBzTYJWxcT\n"
-    "4hDJpCTPG4sm+L8p+Wga+dNkQl3CFyHHINDZ0pKcP0kDDt6inKfiU7uU4lFYbCZy\n"
-    "PceUgIOTQiNVoPQYtkHgZAtmD9rcwdq2/0GZEbzTkZuSE9S8+WlGxJP5xMGzeVsv\n"
-    "zZ/scx0LM7fz5Zq0lsvAwSB1mcs04DaaNpU7Z0tXDIS249RTqdtpPkJzmevpAGhF\n"
-    "VNe30/kCgYEA4rflfqyw/YHWKRxCGJRO+q0gPvlBIes30noz5Hxl0knb/J5Ng4Nx\n"
-    "xMaIMZgCbwHbw5i01JOPvVKICROKb8wkli4Y2eVzxMPKk2CSpji16RQZ4eOl3YXL\n"
-    "1Vnn07Ei+GpsGgDNF0HWf/Ur7es/KdAPCWbKJyoSR90+WN29gP2+Zp8CgYEAwSLv\n"
-    "Kt/vdd6XKnR9xR3IajsW/X2GR/x/m2JffJPOP6VpDTKAbv86hVHDV0oBEDMDc7qy\n"
-    "023ognyFCPb9Gzol2lq8egjMsisA2bgoB9HqldrSYlaZ0wPe0QJBf1gZ29jPyVJ0\n"
-    "ciaBbNbSRhwTrwet7Bae9EbpJsyvBxVh00v0f48CgYEAvKQKviXudmCL01UB4fW0\n"
-    "6XsXs44tlY1juyuW9exTxG9ULZOCJ4U9Kl+OfsVecQL42ny7KY1GMl7zdanerDsN\n"
-    "zi+42cTDWNsYORxHqSrSoYbqKjwCjJmBCppt/IQM9umF3PUBsPJFCd7zmFj/C0lk\n"
-    "2Yu/dGrbHxSFheeqgCOhQz0CgYBfZxdHUYji64o2cYay+QxH1Vp86yWKp6KNKeHL\n"
-    "EuP9soKa/0hMDA1nT8UzeB3gV6Kr5xxwrkj9M+8vR3otmeKa4tlZWsFqfS2VXo9/\n"
-    "lWTQk1/7LZYckzvceMXL1sQnQgkaBH366SRjlBYYhcP/YMa76Uypk+GVxePrltdU\n"
-    "3Z8v5wKBgEXL38yc9LqTIWe1U40ZZKvp2A8c86jtstorEEFqXharE8kxcEpL8ZLL\n"
-    "wjgPKdfNMIuApHSrhG7a7gU1rgJyDy1sOIwSvgTYrWfITPTVu5owvSZEblx4KYOm\n"
-    "g8hke3Oego4v9cwctkQss3/HZ6rs3PR942oAetuxLy3KPF83IeFm\n"
-    "-----END RSA PRIVATE KEY-----\n";
-
-#if AWS_IOT_MQTT_TEST
-
-#define AWS_IOT_MQTT_SERVER_NAME                "a1fljoeglhtf61-ats.iot.us-east-2.amazonaws.com"
-#define AWS_IOT_MQTT_SERVER_PORT                8883
-
-#define AWS_IOT_MQTT_THINGNAME                  "Nuvoton-Mbed-D001"
-
-/* Uncomment and assign one unique MQTT client name; otherwise, one random will be assigned. */
-//#define AWS_IOT_MQTT_CLIENTNAME                 "Nuvoton Client"
+#if !COMPONENT_BME680
 
 /* User self-test topic */
 const char USER_MQTT_TOPIC[] = "Nuvoton/Mbed/D001";
@@ -120,28 +85,42 @@ const char *USER_MQTT_TOPIC_FILTERS[] = {
 const char USER_MQTT_TOPIC_PUBLISH_MESSAGE[] = "{ \"message\": \"Hello from Nuvoton Mbed device\" }";
 
 /* Update thing shadow */
-const char UPDATETHINGSHADOW_MQTT_TOPIC[] = "$aws/things/" AWS_IOT_MQTT_THINGNAME "/shadow/update";
+const char UPDATETHINGSHADOW_MQTT_TOPIC[] = "$aws/things/" AWS_IOT_MQTTS_THINGNAME "/shadow/update";
 const char *UPDATETHINGSHADOW_MQTT_TOPIC_FILTERS[] = {
-    "$aws/things/" AWS_IOT_MQTT_THINGNAME "/shadow/update/accepted",
-    "$aws/things/" AWS_IOT_MQTT_THINGNAME "/shadow/update/rejected"
+    "$aws/things/" AWS_IOT_MQTTS_THINGNAME "/shadow/update/accepted",
+    "$aws/things/" AWS_IOT_MQTTS_THINGNAME "/shadow/update/rejected"
 };
 const char UPDATETHINGSHADOW_MQTT_TOPIC_PUBLISH_MESSAGE[] = "{ \"state\": { \"reported\": { \"attribute1\": 3, \"attribute2\": \"1\" } } }";
 
 /* Get thing shadow */
-const char GETTHINGSHADOW_MQTT_TOPIC[] = "$aws/things/" AWS_IOT_MQTT_THINGNAME "/shadow/get";
+const char GETTHINGSHADOW_MQTT_TOPIC[] = "$aws/things/" AWS_IOT_MQTTS_THINGNAME "/shadow/get";
 const char *GETTHINGSHADOW_MQTT_TOPIC_FILTERS[] = {
-    "$aws/things/" AWS_IOT_MQTT_THINGNAME "/shadow/get/accepted",
-    "$aws/things/" AWS_IOT_MQTT_THINGNAME "/shadow/get/rejected"
+    "$aws/things/" AWS_IOT_MQTTS_THINGNAME "/shadow/get/accepted",
+    "$aws/things/" AWS_IOT_MQTTS_THINGNAME "/shadow/get/rejected"
 };
 const char GETTHINGSHADOW_MQTT_TOPIC_PUBLISH_MESSAGE[] = "";
 
 /* Delete thing shadow */
-const char DELETETHINGSHADOW_MQTT_TOPIC[] = "$aws/things/" AWS_IOT_MQTT_THINGNAME "/shadow/delete";
+const char DELETETHINGSHADOW_MQTT_TOPIC[] = "$aws/things/" AWS_IOT_MQTTS_THINGNAME "/shadow/delete";
 const char *DELETETHINGSHADOW_MQTT_TOPIC_FILTERS[] = {
-    "$aws/things/" AWS_IOT_MQTT_THINGNAME "/shadow/delete/accepted",
-    "$aws/things/" AWS_IOT_MQTT_THINGNAME "/shadow/delete/rejected"
+    "$aws/things/" AWS_IOT_MQTTS_THINGNAME "/shadow/delete/accepted",
+    "$aws/things/" AWS_IOT_MQTTS_THINGNAME "/shadow/delete/rejected"
 };
 const char DELETETHINGSHADOW_MQTT_TOPIC_PUBLISH_MESSAGE[] = "";
+
+#else
+    
+/* Update thing shadow */
+const char UPDATETHINGSHADOW_MQTT_TOPIC[] = "$aws/things/" AWS_IOT_MQTTS_THINGNAME "/shadow/update";
+const char *UPDATETHINGSHADOW_MQTT_TOPIC_FILTERS[] = {
+    "$aws/things/" AWS_IOT_MQTTS_THINGNAME "/shadow/update/accepted",
+    "$aws/things/" AWS_IOT_MQTTS_THINGNAME "/shadow/update/rejected"
+};
+
+//const char UPDATETHINGSHADOW_MQTT_TOPIC_PUBLISH_MESSAGE[] = "{ \"state\": { \"reported\": { \"temperature\": %2.2f } } }";
+const char UPDATETHINGSHADOW_MQTT_TOPIC_PUBLISH_MESSAGE[] = "{ \"state\": { \"reported\": { \"clientName\":\"%s\", \"temperature\": %2.2f, \"humidity\": %2.2f, \"pressure\": %.2f } } }";
+
+#endif  /* #if !COMPONENT_BME680 */
 
 /* MQTT user buffer size */
 const int MQTT_USER_BUFFER_SIZE = 600;
@@ -154,21 +133,16 @@ const int MAX_MQTT_PACKET_SIZE = 1000;
 /* Timeout for receiving message with subscribed topic */
 const int MQTT_RECEIVE_MESSAGE_WITH_SUBSCRIBED_TOPIC_TIMEOUT_MS = 5000;
 
-#if !defined(AWS_IOT_MQTT_CLIENTNAME)
-#if TARGET_M23_NS
+#if !defined(AWS_IOT_MQTTS_CLIENTNAME)
+#if !TARGET_NUVOTON || TARGET_PSA_V8_M
 extern "C"
 int mbedtls_hardware_poll( void *data, unsigned char *output, size_t len, size_t *olen );
 #endif
 #endif
 
-#endif  // End of AWS_IOT_MQTT_TEST
+#endif  // End of AWS_IOT_MQTTS_TEST
 
 #if AWS_IOT_HTTPS_TEST
-
-#define AWS_IOT_HTTPS_SERVER_NAME               "a1fljoeglhtf61-ats.iot.us-east-2.amazonaws.com"
-#define AWS_IOT_HTTPS_SERVER_PORT               8443
-
-#define AWS_IOT_HTTPS_THINGNAME                 "Nuvoton-Mbed-D001"
 
 /* Publish to user topic through HTTPS/POST 
  * HTTP POST https://"endpoint"/topics/"yourTopicHierarchy" */
@@ -221,31 +195,31 @@ const char *HTTPS_OK_STR = "200 OK";
 
 }
 
-#if AWS_IOT_MQTT_TEST
+#if AWS_IOT_MQTTS_TEST
 
 /**
- * /brief   AWS_IoT_MQTT_Test implements the logic with AWS IoT User/Thing Shadow topics through MQTT.
+ * /brief   AWS_IoT_MQTTS_Test implements the logic with AWS IoT User/Thing Shadow topics through MQTT.
  */
-class AWS_IoT_MQTT_Test {
+class AWS_IoT_MQTTS_Test {
 
 public:
     /**
-     * @brief   AWS_IoT_MQTT_Test Constructor
+     * @brief   AWS_IoT_MQTTS_Test Constructor
      *
      * @param[in] domain    Domain name of the MQTT server
      * @param[in] port      Port number of the MQTT server
      * @param[in] net_iface Network interface
      */
-    AWS_IoT_MQTT_Test(const char * domain, const uint16_t port, NetworkInterface *net_iface) :
+    AWS_IoT_MQTTS_Test(const char * domain, const uint16_t port, NetworkInterface *net_iface) :
         _domain(domain), _port(port), _net_iface(net_iface) {
         _tlssocket = new MyTLSSocket;
         _mqtt_client = new MQTT::Client<MyTLSSocket, Countdown, MAX_MQTT_PACKET_SIZE>(*_tlssocket);
     }
 
     /**
-     * @brief AWS_IoT_MQTT_Test Destructor
+     * @brief AWS_IoT_MQTTS_Test Destructor
      */
-    ~AWS_IoT_MQTT_Test() {
+    ~AWS_IoT_MQTTS_Test() {
         delete _mqtt_client;
         _mqtt_client = NULL;
 
@@ -260,20 +234,21 @@ public:
 
         int tls_rc;
         int mqtt_rc;
+        char cClientName[32];
 
         do {
             /* Set host name of the remote host, used for certificate checking */
             _tlssocket->set_hostname(_domain);
 
             /* Set the certification of Root CA */
-            tls_rc = _tlssocket->set_root_ca_cert(SSL_CA_CERT_PEM);
+            tls_rc = _tlssocket->set_root_ca_cert(awsiot_rootca_cert, awsiot_rootca_cert_len);
             if (tls_rc != NSAPI_ERROR_OK) {
                 printf("TLSSocket::set_root_ca_cert(...) returned %d\n", tls_rc);
                 break;
             }
 
             /* Set client certificate and client private key */
-            tls_rc = _tlssocket->set_client_cert_key(SSL_USER_CERT_PEM, SSL_USER_PRIV_KEY_PEM);
+            tls_rc = _tlssocket->set_client_cert_key(awsiot_device_cert, awsiot_device_cert_len, awsiot_device_privkey, awsiot_device_privkey_len);
             if (tls_rc != NSAPI_ERROR_OK) {
                 printf("TLSSocket::set_client_cert_key(...) returned %d\n", tls_rc);
                 break;
@@ -332,11 +307,11 @@ public:
              * When a client connects to the message broker using a client ID that another client is using,
              * a CONNACK message will be sent to both clients and the currently connected client will be
              * disconnected. */
-#if defined(AWS_IOT_MQTT_CLIENTNAME)
-            conn_data.clientID.cstring = AWS_IOT_MQTT_CLIENTNAME;
+#if defined(AWS_IOT_MQTTS_CLIENTNAME)
+            conn_data.clientID.cstring = AWS_IOT_MQTTS_CLIENTNAME;
 #else
             char client_id_data[32];
-#if TARGET_M23_NS
+#if !TARGET_NUVOTON || TARGET_PSA_V8_M
             /* FMC/UID lies in SPE and is inaccessible to NSPE. Use random to generate pseudo-unique instead. */
             uint32_t rand_words[3];
             size_t olen;
@@ -354,6 +329,7 @@ public:
 #endif
             conn_data.clientID.cstring = client_id_data;
 #endif
+            strncpy(cClientName, conn_data.clientID.cstring, sizeof(cClientName));
             printf("Resolved MQTT client ID: %s\n", conn_data.clientID.cstring);
 
             /* The message broker does not support persistent sessions (connections made with 
@@ -375,12 +351,41 @@ public:
             }
             printf("\rMQTT connects OK\n\n");
 
+#if COMPONENT_RHE6616TP01_LCD
+            /* MQTT connects OK set default LCD display. */
+            char text [8];
+
+            LCD_DisableBlink();
+            lcd_printf(ZONE_MAIN_DIGIT,"   OK");
+            thread_sleep_for(800);
+            lcd_printf(ZONE_MAIN_DIGIT,"");
+            lcd_setSymbol(SYMBOL_NVT, 1);
+            lcd_printNumber(ZONE_VER_DIGIT, 101);
+            lcd_setSymbol(SYMBOL_VERSION, 1);
+            lcd_setSymbol(SYMBOL_VER_DIG_P1, 1); 
+            /* Show default pressure, hPa */
+            sprintf(text, "%4dhPa", 0000);
+            lcd_printf(ZONE_MAIN_DIGIT, text);
+            /* Show default humidity, %rH */
+            lcd_printNumberEx(ZONE_PPM_DIGIT, 00, 2);
+            lcd_setSymbol(SYMBOL_PERCENTAGE, 1);
+            /* Show default temperature, degC */    
+            lcd_printNumberEx(ZONE_TEMP_DIGIT, 00, 2);
+            lcd_setSymbol(SYMBOL_TEMP_C, 1);
+            lcd_setSymbol(SYMBOL_WIFI, 1);
+#endif
+
+#if !COMPONENT_BME680
+
             /* Subscribe/publish user topic */
             printf("Subscribing/publishing user topic\n");
             if (! sub_pub_topic(USER_MQTT_TOPIC, USER_MQTT_TOPIC_FILTERS, sizeof (USER_MQTT_TOPIC_FILTERS) / sizeof (USER_MQTT_TOPIC_FILTERS[0]), USER_MQTT_TOPIC_PUBLISH_MESSAGE)) {
                 break;
             }
             printf("Subscribes/publishes user topic OK\n\n");
+#if COMPONENT_RHE6616TP01_LCD
+            lcd_printf(ZONE_MAIN_DIGIT, "USER OK");
+#endif
 
             /* Subscribe/publish UpdateThingShadow topic */
             printf("Subscribing/publishing UpdateThingShadow topic\n");
@@ -388,6 +393,9 @@ public:
                 break;
             }
             printf("Subscribes/publishes UpdateThingShadow topic OK\n\n");
+#if COMPONENT_RHE6616TP01_LCD
+            lcd_printf(ZONE_MAIN_DIGIT, "UPDATE OK");
+#endif
 
             /* Subscribe/publish GetThingShadow topic */
             printf("Subscribing/publishing GetThingShadow topic\n");
@@ -395,6 +403,9 @@ public:
                 break;
             }
             printf("Subscribes/publishes GetThingShadow topic OK\n\n");
+#if COMPONENT_RHE6616TP01_LCD
+            lcd_printf(ZONE_MAIN_DIGIT, "GET OK");
+#endif
 
             /* Subscribe/publish DeleteThingShadow topic */
             printf("Subscribing/publishing DeleteThingShadow topic\n");
@@ -402,8 +413,65 @@ public:
                 break;
             }
             printf("Subscribes/publishes DeleteThingShadow topic OK\n\n");
+#if COMPONENT_RHE6616TP01_LCD
+            lcd_printf(ZONE_MAIN_DIGIT, "DEL OK");
+#endif
 
+#endif  /* #if !COMPONENT_BME680 */
         } while (0);
+
+#if COMPONENT_BME680
+
+        char cDataBuffer[ 256 ];
+#if COMPONENT_RHE6616TP01_LCD
+        char cLcdStr [8];
+#endif
+        uint32_t pressure, humidity, temperature;
+        do {
+            /* Subscribe/publish UpdateThingShadow topic */
+            printf("Subscribing/publishing UpdateThingShadow topic\n");
+            if (bme680.performReading()) {
+//                ( void ) snprintf(cDataBuffer, sizeof(cDataBuffer) - 1, UPDATETHINGSHADOW_MQTT_TOPIC_PUBLISH_MESSAGE, bme680.getHumidity() );
+                ( void ) snprintf(cDataBuffer, sizeof(cDataBuffer) - 1, UPDATETHINGSHADOW_MQTT_TOPIC_PUBLISH_MESSAGE, cClientName, bme680.getTemperature(), bme680.getHumidity(), bme680.getPressure() );
+                if (! sub_pub_topic(UPDATETHINGSHADOW_MQTT_TOPIC, UPDATETHINGSHADOW_MQTT_TOPIC_FILTERS, sizeof (UPDATETHINGSHADOW_MQTT_TOPIC_FILTERS) / sizeof (UPDATETHINGSHADOW_MQTT_TOPIC_FILTERS[0]), (const char*)cDataBuffer)) {
+                    break;
+                }
+                printf("Subscribes/publishes UpdateThingShadow topic OK\n\n");
+                temperature = bme680.getTemperature();
+                pressure = bme680.getPressure()/100;
+                humidity = bme680.getHumidity();
+#if COMPONENT_RHE6616TP01_LCD
+                sprintf(cLcdStr, "%4dhPa", (int)pressure);
+                lcd_printf(ZONE_MAIN_DIGIT, cLcdStr);
+                lcd_printNumberEx(ZONE_TEMP_DIGIT,temperature,2);
+                lcd_printNumberEx(ZONE_PPM_DIGIT, humidity, 2);
+#endif
+            } else {
+                printf("Read Sensor failed \n\n");
+#if COMPONENT_RHE6616TP01_LCD
+                lcd_printf(ZONE_MAIN_DIGIT, "SENSOR FAIL");
+#endif
+            }
+            thread_sleep_for(500);
+            /*  RTC display  */
+            time_t rtctt;
+            char buffer[32];
+            uint32_t u32TimeData, u32TimeHour, u32TimeMinute;
+            rtctt = rtc_read();
+            strftime(buffer, 32, "%H:%M\n", localtime(&rtctt));
+            printf("Time as a custom formatted string = %s", buffer);
+
+            strftime(buffer, 32, "%H\n", localtime(&rtctt));
+            u32TimeHour = atoi(buffer);
+            strftime(buffer, 32, "%M\n", localtime(&rtctt));
+            u32TimeMinute = atoi(buffer);
+            u32TimeData = ( u32TimeHour *100) + u32TimeMinute ;
+#if COMPONENT_RHE6616TP01_LCD
+            lcd_printNumber(ZONE_TIME_DIGIT, u32TimeData);
+#endif
+        } while (1);
+
+#endif  /* #if COMPONENT_BME680 */
 
         printf("MQTT disconnecting");
         if ((mqtt_rc = _mqtt_client->disconnect()) != 0) {
@@ -446,7 +514,7 @@ protected:
 
             int _bpos;
 
-            _bpos = snprintf(_buffer, sizeof (_buffer) - 1, publish_message_body);
+            _bpos = snprintf(_buffer, sizeof (_buffer) - 1, "%s", publish_message_body);
             if (_bpos < 0 || ((size_t) _bpos) > (sizeof (_buffer) - 1)) {
                 printf("snprintf failed: %d\n", _bpos);
                 break;
@@ -474,7 +542,7 @@ protected:
             Timer timer;
             timer.start();
             while (! _message_arrive_count) {
-                if (timer.read_ms() >= MQTT_RECEIVE_MESSAGE_WITH_SUBSCRIBED_TOPIC_TIMEOUT_MS) {
+                if (std::chrono::duration_cast<std::chrono::milliseconds>(timer.elapsed_time()).count() >= MQTT_RECEIVE_MESSAGE_WITH_SUBSCRIBED_TOPIC_TIMEOUT_MS) {
                     printf("MQTT receives message with subscribed %s TIMEOUT\n", topic);
                     break;
                 }
@@ -529,9 +597,9 @@ private:
     }
 };
 
-volatile uint16_t   AWS_IoT_MQTT_Test::_message_arrive_count = 0;
+volatile uint16_t   AWS_IoT_MQTTS_Test::_message_arrive_count = 0;
 
-#endif  // End of AWS_IOT_MQTT_TEST
+#endif  // End of AWS_IOT_MQTTS_TEST
 
 
 #if AWS_IOT_HTTPS_TEST
@@ -576,14 +644,14 @@ public:
             _tlssocket->set_hostname(_domain);
 
             /* Set the certification of Root CA */
-            tls_rc = _tlssocket->set_root_ca_cert(SSL_CA_CERT_PEM);
+            tls_rc = _tlssocket->set_root_ca_cert(awsiot_rootca_cert, awsiot_rootca_cert_len);
             if (tls_rc != NSAPI_ERROR_OK) {
                 printf("TLSSocket::set_root_ca_cert(...) returned %d\n", tls_rc);
                 break;
             }
 
             /* Set client certificate and client private key */
-            tls_rc = _tlssocket->set_client_cert_key(SSL_USER_CERT_PEM, SSL_USER_PRIV_KEY_PEM);
+            tls_rc = _tlssocket->set_client_cert_key(awsiot_device_cert, awsiot_device_cert_len, awsiot_device_privkey, awsiot_device_privkey_len);
             if (tls_rc != NSAPI_ERROR_OK) {
                 printf("TLSSocket::set_client_cert_key(...) returned %d\n", tls_rc);
                 break;
@@ -806,6 +874,51 @@ protected:
 
 #endif  // End of AWS_IOT_HTTPS_TEST
 
+#if COMPONENT_RHE6616TP01_LCD
+Ticker flipper;
+static volatile uint32_t g_u32RTCINT = 0;
+
+/* Add tikcer for symbol ":" blinking 1/sec  */
+void flip()
+{
+    g_u32RTCINT++;
+    if(g_u32RTCINT == 1)
+        lcd_setSymbol(SYMBOL_TIME_DIG_COL1, 1);
+    else{
+        g_u32RTCINT = 0;    
+        lcd_setSymbol(SYMBOL_TIME_DIG_COL1, 0);}
+}
+#endif
+
+#if COMPONENT_BME680
+static void sensor_test() {
+    int count = 10;
+   
+    if (!bme680.begin()) {
+        printf("BME680 Begin failed \r\n");
+        return;
+    }
+    do {
+        if (++count >= 10)
+        {
+            count = 0;
+            printf("\r\nTemperature  Humidity  Pressure    VOC\r\n"
+                   "    degC        %%        hPa      KOhms\r\n"
+                   "------------------------------------------\r\n");
+        }
+ 
+        if (bme680.performReading())
+        {
+            printf("   %.2f      ", bme680.getTemperature());
+            printf("%.2f    ", bme680.getHumidity());
+            printf("%.2f    ", bme680.getPressure() / 100.0);
+            printf("%0.2f\r\n", bme680.getGasResistance() / 1000.0);
+        }
+        thread_sleep_for(1000);
+    } while(0);
+}
+#endif
+
 int main() {
 
     /* The default 9600 bps is too slow to print full TLS debug info and could
@@ -813,20 +926,156 @@ int main() {
 
     printf("\nStarting AWS IoT test\n");
 
+#if COMPONENT_RHE6616TP01_LCD
+    printf("Enable LCD program ...\r\n");
+    lcd_init();
+
+    lcd_printf(ZONE_MAIN_DIGIT, "START");
+    thread_sleep_for(2000);
+    lcd_printf(ZONE_MAIN_DIGIT, "");
+#endif
+
+#if COMPONENT_BME680
+    sensor_test();
+#endif
+
 #if defined(MBED_MAJOR_VERSION)
     printf("Using Mbed OS %d.%d.%d\n", MBED_MAJOR_VERSION, MBED_MINOR_VERSION, MBED_PATCH_VERSION);
 #else
     printf("Using Mbed OS from master.\n");
 #endif
 
+#if COMPONENT_RHE6616TP01_LCD
+    lcd_printf(ZONE_MAIN_DIGIT, "CONNECT");
+    LCD_EnableBlink(500);
+#endif
+
+#if COMPONENT_RHE6616TP01_LCD
+    /* lcd showing RTC */
+    //set_time(1256729737);
+    time_t rtctt;
+    char buffer[32];
+    uint32_t u32TimeData, u32TimeHour, u32TimeMinute;
+    rtc_init();
+    rtctt = rtc_read();
+
+    printf("this as seconds since january 1, 1970 =%d\n", (int)rtctt);
+
+    strftime(buffer, 32, "%H:%M\n", localtime(&rtctt));
+    printf("Time as a custom formatted string = %s", buffer);
+
+    strftime(buffer, 32, "%H\n", localtime(&rtctt));
+    u32TimeHour = atoi(buffer);
+    strftime(buffer, 32, "%M\n", localtime(&rtctt));
+    u32TimeMinute = atoi(buffer);
+    u32TimeData = ( u32TimeHour *100) + u32TimeMinute ;
+    lcd_setSymbol(SYMBOL_TIME_DIG_COL1, 1);
+    lcd_printNumber(ZONE_TIME_DIGIT, u32TimeData);
+    flipper.attach(&flip, 500ms);   
+#endif
+
     NetworkInterface *net = NetworkInterface::get_default_instance();
     if (NULL == net) {
         printf("Connecting to the network failed. See serial output.\n");
+#if COMPONENT_RHE6616TP01_LCD
+        LCD_DisableBlink();
+        thread_sleep_for(800);
+        lcd_printf(ZONE_MAIN_DIGIT, "  FAIL");
+#endif
         return 1;
     }
+
+#if (MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE != WIFI )
     nsapi_error_t status = net->connect();
+#else
+    #define MY_SSID_MAX 16
+    #define MY_PASSWD_MAX 16
+    #define MY_SAFE_STR_FMT_(x) "%" #x "s"
+    #define MY_SAFE_STR_FMT(x) MY_SAFE_STR_FMT_(x)
+    char my_ssid[MY_SSID_MAX + 1];
+    char my_passwd[MY_PASSWD_MAX + 1];
+    int choice;
+    int jj = 0;
+    nsapi_error_t status;
+    printf("Input WiFi SSID/PASSWD(Y/N):\r\n");
+    for( jj=0; jj < 50; jj++)
+    {
+        /* fetch_host_command can be not defined, skip it */
+        if (!fetch_host_command) {
+            choice = 'N';
+            break;
+        }
+
+        choice = fetch_host_command();
+        if(choice != -1) {
+            if( (choice == 'Y') || (choice == 'y') || (choice == 'N') || (choice == 'n') ) {
+                break;
+            }
+        }
+        wait_us(50*1000);
+    }
+    if( (choice == 'Y') || (choice == 'y') ) {
+move_set_wifi:
+        printf("WiFi SSID:");
+        scanf(MY_SAFE_STR_FMT(MY_SSID_MAX), (char *)&my_ssid);
+        printf("\nSSID=%s\r\n", my_ssid);
+        printf("WiFi PASSWD:");
+        scanf(MY_SAFE_STR_FMT(MY_PASSWD_MAX),(char *)&my_passwd);
+#if TARGET_PSA_Target
+        /* Write data into PSA storage */
+        /* Create a new, or modify an existing, uid/value pair */
+        if (PSA_SUCCESS != psa_ps_set(uid_wifi_ssid, sizeof(my_ssid), my_ssid, PSA_STORAGE_FLAG_NONE)) {
+            printf("Store WiFi SSID into PSA storage failed \r\n");
+        }
+        if (PSA_SUCCESS != psa_ps_set(uid_wifi_passwd, sizeof(my_passwd), my_passwd, PSA_STORAGE_FLAG_NONE)) {
+            printf("Store WiFi PASWWD into PSA storage failed \r\n");
+        }
+#endif
+    } else {
+#if TARGET_PSA_Target
+        /* Get information of data from PSA storage */
+        psa_status_t retStatus;
+        //struct psa_storage_info_t data1_info; 
+        size_t retLen;
+        retStatus = psa_ps_get(uid_wifi_ssid, 0, sizeof(data_wifi_ssid), &data_wifi_ssid, &retLen);
+        if (PSA_SUCCESS != retStatus) {
+            strncpy(my_ssid, MBED_CONF_NSAPI_DEFAULT_WIFI_SSID, sizeof(my_ssid) - 1);
+            my_ssid[sizeof(my_ssid) - 1] = '\0';
+        } else {
+            strncpy(my_ssid, (const char*)data_wifi_ssid, sizeof(my_ssid) - 1);
+            my_ssid[sizeof(my_ssid) - 1] = '\0';
+        }
+        retStatus = psa_ps_get(uid_wifi_passwd, 0, sizeof(data_wifi_passwd), &data_wifi_passwd, &retLen);
+        if (PSA_SUCCESS != retStatus) {
+            strncpy(my_passwd, MBED_CONF_NSAPI_DEFAULT_WIFI_PASSWORD, sizeof(my_passwd) - 1);
+            my_passwd[sizeof(my_passwd) - 1] = '\0';
+        } else {
+            strncpy(my_passwd, (const char*)data_wifi_passwd, sizeof(my_passwd) - 1);
+            my_passwd[sizeof(my_passwd) - 1] = '\0';
+        }
+#else
+        strncpy(my_ssid, MBED_CONF_NSAPI_DEFAULT_WIFI_SSID, sizeof(my_ssid) - 1);
+        my_ssid[sizeof(my_ssid) - 1] = '\0';
+        strncpy(my_passwd, MBED_CONF_NSAPI_DEFAULT_WIFI_PASSWORD, sizeof(my_passwd) - 1);
+        my_passwd[sizeof(my_passwd) - 1] = '\0';
+#endif
+        printf("\nDefault SSID=%s\r\n", my_ssid);
+        if (!strcmp(my_ssid, "SSID")) {
+            printf("### Can't find any WiFi SSID from PSA storage or not assign SSID in mbed_app.json file ###\r\n");
+            printf("### Please input your WiFi --> \r\n");
+            goto move_set_wifi;
+        }
+    }
+    status = (net->wifiInterface())->connect(my_ssid, my_passwd, NSAPI_SECURITY_WPA2,0);
+#endif     
+
     if (status != NSAPI_ERROR_OK) {
         printf("Connecting to the network failed %d!\n", status);
+#if COMPONENT_RHE6616TP01_LCD
+        LCD_DisableBlink();
+        thread_sleep_for(800);
+        lcd_printf(ZONE_MAIN_DIGIT, "  FAIL");
+#endif
         return -1;
     }
     SocketAddress sockaddr;
@@ -837,11 +1086,11 @@ int main() {
     }
     printf("Connected to the network successfully. IP address: %s\n", sockaddr.get_ip_address());
 
-#if AWS_IOT_MQTT_TEST
-    AWS_IoT_MQTT_Test *mqtt_test = new AWS_IoT_MQTT_Test(AWS_IOT_MQTT_SERVER_NAME, AWS_IOT_MQTT_SERVER_PORT, net);
+#if AWS_IOT_MQTTS_TEST
+    AWS_IoT_MQTTS_Test *mqtt_test = new AWS_IoT_MQTTS_Test(AWS_IOT_MQTTS_SERVER_NAME, AWS_IOT_MQTTS_SERVER_PORT, net);
     mqtt_test->start_test();
     delete mqtt_test;
-#endif  // End of AWS_IOT_MQTT_TEST
+#endif  // End of AWS_IOT_MQTTS_TEST
 
 #if AWS_IOT_HTTPS_TEST
     AWS_IoT_HTTPS_Test *https_test = new AWS_IoT_HTTPS_Test(AWS_IOT_HTTPS_SERVER_NAME, AWS_IOT_HTTPS_SERVER_PORT, net);
@@ -854,4 +1103,7 @@ int main() {
     if (status != NSAPI_ERROR_OK) {
         printf("\n\nDisconnect from network interface failed %d\n", status);
     }
+#if COMPONENT_RHE6616TP01_LCD
+    lcd_printf(ZONE_MAIN_DIGIT, "   End");
+#endif
 }

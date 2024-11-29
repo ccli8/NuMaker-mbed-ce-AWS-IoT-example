@@ -43,6 +43,6 @@ void mbed_main(void)
     provision();
     /* Spare memory if event queue is unnecessary */
     if (pump_host_command) {
-        mbed_event_queue()->call_every(2000, pump_host_command);
+        mbed_event_queue()->call_every(2s, pump_host_command);
     }
 }

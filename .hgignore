@@ -1,9 +1,0 @@
-# Use Python/Perl regexp
-syntax: regexp
-
-^\.mbed$
-\.build/
-BUILD/
-easy-connect/
-mbed-os/
-MQTT/
