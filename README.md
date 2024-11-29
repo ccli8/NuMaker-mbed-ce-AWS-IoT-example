@@ -1,16 +1,17 @@
-# Example for Connection with AWS IoT thru MQTT/HTTPS on Mbed OS
+# Example for connection with AWS IoT thru MQTTS/HTTPS on Mbed CE enabled boards
 
 This is an example to demonstrate connection with [AWS IoT](https://aws.amazon.com/iot)
-on Nuvoton Mbed-enabled boards.
+on Nuvoton Mbed CE enabled boards.
 
 ## Supported platforms
 On Mbed OS, connection with AWS IoT requires Mbed TLS. It requires more than 64 KB RAM.
-Currently, the following Nuvoton Mbed-enalbed boards can afford such memory footprint:
-- [NuMaker-PFM-NUC472](https://developer.mbed.org/platforms/Nuvoton-NUC472/)
-- [NuMaker-PFM-M487](https://developer.mbed.org/platforms/NUMAKER-PFM-M487/)
-- [NuMaker-IoT-M487](https://os.mbed.com/platforms/NUMAKER-IOT-M487/)
-- [NuMaker-M2354](https://os.mbed.com/platforms/NUMAKER-M2354/)
-- [NuMaker-IoT-M467](https://os.mbed.com/platforms/NUMAKER-IOT-M467/)
+Currently, the following Nuvoton Mbed CE enabled boards can afford such memory footprint:
+- [NuMaker-PFM-NUC472](https://www.nuvoton.com/products/iot-solution/iot-platform/numaker-pfm-nuc472/)
+- [NuMaker-PFM-M487](https://www.nuvoton.com/products/iot-solution/iot-platform/numaker-pfm-m487/)
+- [NuMaker-IoT-M487](https://www.nuvoton.com/products/iot-solution/iot-platform/numaker-iot-m487/)
+- [NuMaker-IoT-M467](https://www.nuvoton.com/board/numaker-iot-m467/)
+- [NuMaker-M2354](https://www.nuvoton.com/board/numaker-m2354/)
+- [NuMaker-IoT-M2354](https://www.nuvoton.com/board/numaker-iot-m2354/)
 
 ## Access and manage AWS IoT Service
 To run the example, you need to register one [AWS account](https://aws.amazon.com/)
@@ -73,55 +74,55 @@ protocol dependent parameters into your device. These configurations are all cen
 From above, you've got 4 security credential files: CA certificate and user certificate/private key/public key.
 Configure CA certificate, user certificate, and user private key into your device.
 User public key has been included in user certificate and is not used here.
+See `configs/awsiot_credentials.c`.
+
 1. Replace CA certificate with downloaded from the Console.
     ```
-    const char SSL_CA_CERT_PEM[] = "-----BEGIN CERTIFICATE-----\n"
+    const char AWSIOT_ROOTCA_CERT[] = "-----BEGIN CERTIFICATE-----\n"
         "Replace Me"
     ```
 
 1. Replace user certificate with downloaded from the Console.
     ```
-    const char SSL_USER_CERT_PEM[] = "-----BEGIN CERTIFICATE-----\n"
+    const char AWSIOT_DEVICE_CERT[] = "-----BEGIN CERTIFICATE-----\n"
         "Replace Me"
     ```
 
 1. Replace user private key with downloaded from the Console.
     ```
-    const char SSL_USER_PRIV_KEY_PEM[] = "-----BEGIN RSA PRIVATE KEY-----\n"
+    const char AWSIOT_DEVICE_PRIVKEY[] = "-----BEGIN RSA PRIVATE KEY-----\n"
         "Replace Me"
     ```
 
-**NOTE:** The credential hard-coded in source code may get deactivated or deleted.
-          Use your own credential for connection with AWS IoT.
-
-### Connect through MQTT
+### Connect through MQTTS
 To connect your device with AWS IoT through MQTT, you need to configure the following parameters.
+See `configs/awsiot_user_config.h`).
 
 1. Enable connection through MQTT.
     ```
-    #define AWS_IOT_MQTT_TEST       1
+    #define AWS_IOT_MQTTS_TEST      1
     ```
 
 1. Replace server name (endpoint). **Endpoint** has the following format and you just 
    need to modify **IDENTIFIER** and **REGION** to match your case.
     <pre>
-    #define AWS_IOT_MQTT_SERVER_NAME                "<b>IDENTIFIER</b>.iot.<b>REGION</b>.amazonaws.com"
+    #define AWS_IOT_MQTTS_SERVER_NAME               "<b>&lt;IDENTIFIER&gt;</b>.iot.<b>&lt;REGION&gt;</b>.amazonaws.com"
     </pre>
    
 1. Server port number is fixed. Don't change it.
     ```
-    #define AWS_IOT_MQTT_SERVER_PORT                8883
+    #define AWS_IOT_MQTTS_SERVER_PORT               8883
     ```
     
 1. Replace **THINGNAME** to match your case. The **THINGNAME** is just the name of the thing you've created above.
     <pre>
-    #define AWS_IOT_MQTT_THINGNAME                  "<b>THINGNAME</b>"
+    #define AWS_IOT_MQTTS_THINGNAME                 "<b>&lt;THINGNAME&gt;</b>"
     </pre>
     
 1. Replace **CLIENTNAME** to match your case. If you adopt the example policy above,
    you can modify it arbitrarily because the policy permits any client name bound to your account.
     <pre>
-    #define AWS_IOT_MQTT_CLIENTNAME                 "<b>CLIENTNAME</b>"
+    #define AWS_IOT_MQTTS_CLIENTNAME                "<b>&lt;CLIENTNAME&gt;</b>"
     </pre>
 
 AWS IoT MQTT protocol supports topic subscribe/publish. The example demonstrates:
@@ -133,6 +134,7 @@ AWS IoT MQTT protocol supports topic subscribe/publish. The example demonstrates
 
 ### Connect through HTTPS
 To connect your device with AWS IoT through HTTPS, you need to configure the following parameters.
+See `configs/awsiot_user_config.h`).
 
 1. Enable connection through HTTPS.
     ```
@@ -142,7 +144,7 @@ To connect your device with AWS IoT through HTTPS, you need to configure the fol
 1. Replace server name (endpoint). **Endpoint** has the following format and you just 
    need to modify **IDENTIFIER** and **REGION** to match your case.
     <pre>
-    #define AWS_IOT_HTTPS_SERVER_NAME               "<b>IDENTIFIER</b>.iot.<b>REGION</b>.amazonaws.com"
+    #define AWS_IOT_HTTPS_SERVER_NAME               "<b>&lt;IDENTIFIER&gt;</b>.iot.<b>&lt;REGION&gt;</b>.amazonaws.com"
     </pre>
    
 1. Server port number is fixed. Don't change it.
@@ -152,7 +154,7 @@ To connect your device with AWS IoT through HTTPS, you need to configure the fol
     
 1. Replace **THINGNAME** to match your case. The **THINGNAME** is just the name of the thing you've created above.
     <pre>
-    #define AWS_IOT_HTTPS_THINGNAME                 "<b>THINGNAME</b>"
+    #define AWS_IOT_HTTPS_THINGNAME                 "<b>&lt;THINGNAME&gt;</b>"
     </pre>
 
 AWS IoT HTTPS protocol supports topic publish-only and RESTful API. The example demonstrates:
@@ -165,6 +167,72 @@ AWS IoT HTTPS protocol supports topic publish-only and RESTful API. The example 
     - Update thing shadow RESTfully through HTTPS/POST method
     - Get thing shadow RESTfully through HTTPS/GET method
     - Delete thing shadow RESTfully through HTTPS/DELETE method
+
+## Developer guide
+
+This section is intended for developers to get started, import the example application, build, and get it running on target board.
+
+In the following, we take NuMaker-IoT-M467 as example board to show this example.
+
+### Hardware requirements
+
+-   NuMaker-IoT-M467 board
+-   Host OS: Windows or others
+
+### Hardware setup
+
+-   Switch target board
+    -   NuMaker-IoT-M467's Nu-Link2: TX/RX/VCOM to ON, MSG to non-ON
+-   Connect target board to host through USB
+    -   NuMaker-IoT-M467: Mbed USB drive shows up in File Browser
+
+### Build the example
+
+1.  Clone the example and navigate into it
+    ```
+    $ git clone https://github.com/mbed-nuvoton/NuMaker-mbed-ce-AWS-IoT-example
+    $ cd NuMaker-mbed-ce-AWS-IoT-example
+    $ git checkout -f master
+    ```
+
+1.  Deploy necessary libraries
+    ```
+    $ git submodule update --init
+    ```
+    Or for fast install:
+    ```
+    $ git submodule update --init --filter=blob:none
+    ```
+
+1.  Configure network interface
+    -   Ethernet: Need no further configuration.
+
+        **mbed_app.json5**:
+        ```json5
+        "target.network-default-interface-type" : "Ethernet",
+        ```
+
+    -   WiFi: Configure WiFi `SSID`/`PASSWORD`.
+
+        **mbed_app.json5**:
+        ```json5
+        "target.network-default-interface-type" : "WIFI",
+        "nsapi.default-wifi-security"           : "WPA_WPA2",
+        "nsapi.default-wifi-ssid"               : "\"SSID\"",
+        "nsapi.default-wifi-password"           : "\"PASSWORD\"",
+        ```
+
+1.  Compile with cmake/ninja
+    ```
+    $ mkdir build; cd build
+    $ cmake .. -GNinja -DCMAKE_BUILD_TYPE=Develop -DMBED_TARGET=NUMAKER_IOT_M467
+    $ ninja
+    $ cd ..
+    ```
+
+### Flash the image
+
+Just drag-n-drop `NuMaker-mbed-ce-AWS-IoT-example.bin` or `NuMaker-mbed-ce-AWS-IoT-example.hex` onto NuMaker-IoT-M467 board.
 
 ## Monitor the application
 If you configure your terminal program with **115200/8-N-1**, you would see output similar to:
@@ -263,8 +331,8 @@ MQTT disconnects OK
     We reduce memory footprint by:
     1. Enabling RFC 6066 max_fragment_length extension by configuing `my-tlssocket.tls-max-frag-len` to 4.
 
-        `my-tlssocket/mbed_lib.json`:
-        ```json
+        `my-tlssocket/mbed_lib.json5`:
+        ```json5
         {
             "name": "my-tlssocket",
             "config": {
@@ -276,8 +344,8 @@ MQTT disconnects OK
         }
         ```
 
-        `mbed_app.json`:
-        ```json
+        `mbed_app.json5`:
+        ```json5
         "SOME_TARGET": {
             "my-tlssocket.tls-max-frag-len"         : 4,
         },
@@ -302,6 +370,14 @@ MQTT disconnects OK
     1. TLS handshake may need larger I/O buffers than configured.
 
     If you doubt your trouble is caused by this configuration, disable it by:
-    1.  Removing the line `my-tlssocket.tls-max-frag-len` in `mbed_app.json`.
+    1.  Removing the line `my-tlssocket.tls-max-frag-len` in `mbed_app.json5`.
     1.  Commenting out `MBEDTLS_SSL_IN_CONTENT_LEN`/`MBEDTLS_SSL_OUT_CONTENT_LEN` in `mbedtls_user_config.h`.
         This will change back to 16KiB/16KiB.
+
+-   If the default domain name server (DNS) can't work well, you could add one DNS by mbed API [add_dns_server](https://os.mbed.com/docs/mbed-os/v6.16/apis/dns-apis.html), for example:
+    ```C++
+    /* Add your DNS server */
+    SocketAddress sockaddr;
+    sockaddr.set_ip_address("<your-dns-server>");
+    net->add_dns_server(sockaddr, NULL);
+    ```
